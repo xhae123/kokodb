@@ -31,6 +31,14 @@ Build a lightweight embedded SQL database for Kotlin/JVM that provides storage, 
 - Use Mermaid sequence diagrams or other diagrams when they make interactions, execution flow, or architecture easier to understand. Keep diagrams focused and avoid adding them when text is clearer.
 - Scale the detail to the change. Keep small PRs concise while providing enough context and evidence for meaningful review.
 
+# Comment Rules
+
+- Prefer clear names and small functions over explanatory comments. Do not narrate obvious code or add comments to every declaration or step.
+- Add a comment only when it explains a non-obvious design reason, invariant, constraint, or edge case that the code alone does not convey.
+- Keep comments short and close to the relevant code. Describe why the behavior is necessary rather than restating what the code does.
+- Use concise KDoc for public API contracts, including important return values, errors, and limitations. Avoid boilerplate parameter lists and duplicating types or names.
+- Keep comments accurate when changing code. Remove stale, redundant, or speculative comments; use TODOs only for concrete follow-up work.
+
 # Commit Rules
 
 - Keep each commit focused on one logical change. Do not mix unrelated changes or large formatting changes.
