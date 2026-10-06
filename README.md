@@ -10,20 +10,24 @@ The ultimate goal is to give Kotlin developers who need a small database an opti
 
 ## Getting started
 
-Declare a model once. The processor generates its schema and object mapper; opening a database automatically discovers those definitions and prepares the tables.
+Declare a model and repository interface. The processor generates the schema, object mapper, and repository implementation; opening a database automatically discovers model definitions and prepares the tables.
 
 ```kotlin
 import kokodb.Database
+import kokodb.DbRepository
 import kokodb.DbTable
 import kokodb.Id
+import kokodb.Repository
 import kokodb.eq
-import kokodb.repository
 
 @DbTable("users")
 data class User(@Id val id: Int, val name: String)
 
+@DbRepository
+interface UserRepository : Repository<User, Int>
+
 val db = Database.inMemory()
-val repository = db.repository<User, Int>()
+val repository = UserRepository(db)
 repository.insert(User(1, "Koko"))
 
 val users: List<User> = repository.query()
@@ -39,15 +43,26 @@ There is no per-model registration, manual table definition, table creation call
 
 A model is a Kotlin type mapped to a relational table. Name it after the domain concept, such as `User` or `Order`, without a required `Entity`, `Model`, or `Record` suffix. A row is one stored entry; a table defines the relational schema.
 
-A repository manages a model through a type parameter and does not inherit from it. Use `db.repository<User, Int>()` for ordinary persistence operations. Add a named repository only when custom operations are useful:
+Declare a named repository interface once. KSP generates its implementation and a same-name factory such as `UserRepository(db)`. The model and key types belong to the declaration; callers use the concrete repository contract.
+
+Custom queries use ordinary Kotlin method bodies:
 
 ```kotlin
-import kokodb.Repository
-
-class UserRepository(db: Database) : Repository<User, Int>(db, User::class, Int::class) {
+@DbRepository
+interface UserRepository : Repository<User, Int> {
     fun named(name: String): List<User> = query().where(User::name eq name).toList()
 }
+
+class UserService(private val users: UserRepository) {
+    fun register(id: Int, name: String): Int = users.insert(User(id, name))
+}
+
+val db = Database.inMemory()
+val users = UserRepository(db)
+val service = UserService(users)
 ```
+
+Construct the database and repositories at the application's composition root, then inject repository interfaces into services. The generated factory binds to the supplied database; KokoDB does not provide a dependency-injection container or a global database instance.
 
 ## Repository contracts
 
@@ -59,7 +74,9 @@ repository.deleteById(1)                     // 1 when removed, 0 when absent
 ```
 
 - Declare exactly one `@Id` constructor property when using a repository. Int and String keys are supported; callers supply their values. Keys are case-sensitive values, not identifiers.
-- Models without `@Id` remain usable through `Database.insert()` and `Database.from<Model>()`. Repository construction rejects missing keys, missing adapters, and a mismatched ID type.
+- `@DbRepository` requires a public top-level non-generic interface directly extending `Repository<Model, ID>`. The processor checks that the model has `@DbTable`, exactly one `@Id`, and a matching ID type. Custom members require bodies; derived queries and overrides of inherited CRUD methods are unsupported.
+- Models without `@Id` remain usable through `Database.insert()` and `Database.from<Model>()`. A generated repository requires its model adapter to be discoverable when opening the database.
+- Models may be declared in a separate compiled module. Table and key annotations have binary retention so the repository processor can validate that model without runtime annotation scanning.
 - Duplicate primary keys fail before mutation through SQL, model, and repository insertion alike. Key metadata is part of stored schema validation.
 - `update(model)` replaces the complete row identified by that model's key. It does not insert an absent row, change another row's key, or perform automatic dirty checking. Use separate insert and update operations instead of an ambiguous save operation.
 - Models and query results are detached. Mutating an input or returned object never writes to storage; call `update()` explicitly.
@@ -86,7 +103,7 @@ sequenceDiagram
 
 ## Build setup
 
-Code generation requires the KSP plugin and the KokoDB processor in each module declaring annotated models. Artifacts are not published yet; the `sample` module demonstrates the setup inside this checkout:
+Code generation requires the KSP plugin and the KokoDB processor in each module declaring annotated models or repositories. Artifacts are not published yet; the `sample` module demonstrates the setup inside this checkout:
 
 ```kotlin
 plugins {
@@ -166,6 +183,9 @@ Each instance is isolated and intended for sequential use. Data lasts only as lo
 ```mermaid
 flowchart TD
     Model["Annotated Kotlin model"] --> KSP["Build-time KSP processor"]
+    Repository["Declared repository interface"] --> KSP
+    KSP --> Implementation["Generated repository implementation and factory"]
+    Implementation --> Adapter
     KSP --> Adapter["Generated schema and object mapper"]
     KSP --> Manifest["Generated service manifest"]
     Manifest --> Discovery["Database initialization"]

@@ -97,27 +97,32 @@ class DslCompilationTest {
     }
 
     @Test
-    fun `repositories compile from consumers and reject incorrect operation types`() {
-        val models = "data class User(@Id val id: Int, val name: String)\ndata class Other(val id: Int)"
-        compile("RepositoryValid", "$models\n" + """
-            class UserRepository(db: Database) : Repository<User, Int>(db, User::class, Int::class) {
+    fun `declared repositories compile from consumers and reject incorrect operation types`() {
+        val models = """
+            data class User(@Id val id: Int, val name: String)
+            data class Other(val id: Int)
+            @DbRepository
+            interface UserRepository : Repository<User, Int> {
                 fun named(name: String) = query().where(User::name eq name).toList()
             }
-            fun usage(db: Database): User? {
-                val users = db.repository<User, Int>()
-                users.insert(User(1, "Koko"))
-                users.update(User(1, "Updated"))
-                users.deleteById(2)
-                return users.findById(1)
+        """.trimIndent()
+        compile("RepositoryValid", "$models\n" + """
+            class UserService(private val users: UserRepository) {
+                fun usage(): User? {
+                    users.insert(User(1, "Koko"))
+                    users.update(User(1, "Updated"))
+                    users.deleteById(2)
+                    return users.findById(1)
+                }
             }
         """.trimIndent(), ExitCode.OK)
         val invalid = mapOf(
-            "RepositoryKey" to "db.repository<User, Int>().findById(\"one\")",
-            "RepositoryNull" to "db.repository<User, Int>().deleteById(null)",
-            "RepositoryInsert" to "db.repository<User, Int>().insert(Other(1))",
-            "RepositoryUpdate" to "db.repository<User, Int>().update(Other(1))",
-            "RepositoryOwner" to "db.repository<User, Int>().query().where(Other::id eq 1)",
+            "RepositoryKey" to "users.findById(\"one\")",
+            "RepositoryNull" to "users.deleteById(null)",
+            "RepositoryInsert" to "users.insert(Other(1))",
+            "RepositoryUpdate" to "users.update(Other(1))",
+            "RepositoryOwner" to "users.query().where(Other::id eq 1)",
         )
-        for ((name, code) in invalid) compile(name, "$models\nfun usage(db: Database) { $code }", ExitCode.COMPILATION_ERROR)
+        for ((name, code) in invalid) compile(name, "$models\nfun usage(users: UserRepository) { $code }", ExitCode.COMPILATION_ERROR)
     }
 }

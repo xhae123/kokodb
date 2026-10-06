@@ -13,7 +13,7 @@ Key-value storage and general-purpose object serialization are no longer the pro
 - Call a stored table entry a row. Reserve `Table` and `Column` for relational schema concepts and their lower-level APIs.
 - Use `Repository` for a model-specific persistence abstraction, with names such as `UserRepository`. A repository manages a model through a type parameter; it does not inherit from the model.
 - Keep persistence operations separate from model instances. Do not require models to inherit a persistence base class.
-- Use `@DbTable` for table mapping and `@Id` for a caller-supplied single-column primary key. Common CRUD is available through `db.repository<Model, ID>()`; add a named repository subclass only for custom operations. Keep models detached and writes explicit. Do not imply automatic dirty checking, generated keys, or transactions.
+- Use `@DbTable` for table mapping and `@Id` for a caller-supplied single-column primary key. Declare `@DbRepository interface UserRepository : Repository<User, Int>` and bind it with the generated `UserRepository(db)` factory at the application composition root. Inject the repository interface into services. Put custom query logic in interface method bodies; do not expose model/ID factory generics or type tokens in application usage. Keep models detached and writes explicit. Do not imply automatic dirty checking, generated keys, or transactions.
 
 # General Principles
 

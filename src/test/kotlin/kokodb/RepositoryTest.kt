@@ -13,16 +13,26 @@ data class RepositoryUser(@Id val id: Int, var name: String)
 @DbTable("repository_settings")
 data class RepositorySetting(@property:Id val key: String, val value: Int)
 
-class UserRepository(database: Database) : Repository<RepositoryUser, Int>(
-    database, RepositoryUser::class, Int::class,
-) {
+@DbRepository
+interface UserRepository : Repository<RepositoryUser, Int> {
     fun named(name: String): List<RepositoryUser> = query().where(RepositoryUser::name eq name).toList()
+    val count: Int get() = findAll().size
+}
+
+@DbRepository
+interface SettingRepository : Repository<RepositorySetting, String>
+
+@DbRepository
+interface OtherUserRepository : Repository<RepositoryUser, Int>
+
+private class UserService(private val users: UserRepository) {
+    fun rename(id: Int, name: String): Int = users.findById(id)?.let { users.update(it.copy(name = name)) } ?: 0
 }
 
 class RepositoryTest {
     @Test
     fun `repository supports CRUD without exposing generated tables`() {
-        val users = Database.inMemory().repository<RepositoryUser, Int>()
+        val users = UserRepository(Database.inMemory())
         assertNull(users.findById(1))
         assertEquals(1, users.insert(RepositoryUser(1, "Original")))
         assertEquals(RepositoryUser(1, "Original"), users.findById(1))
@@ -37,7 +47,7 @@ class RepositoryTest {
 
     @Test
     fun `string primary keys and property annotation targets are supported`() {
-        val settings = Database.inMemory().repository<RepositorySetting, String>()
+        val settings = SettingRepository(Database.inMemory())
         settings.insert(RepositorySetting("theme", 1))
         assertFailsWith<DatabaseException> { settings.insert(RepositorySetting("theme", 2)) }
         assertEquals(1, settings.update(RepositorySetting("theme", 3)))
@@ -49,7 +59,7 @@ class RepositoryTest {
     @Test
     fun `duplicate keys fail through repository model and SQL interfaces`() {
         val db = Database.inMemory()
-        val users = db.repository<RepositoryUser, Int>()
+        val users = UserRepository(db)
         users.insert(RepositoryUser(1, "Original"))
         assertFailsWith<DatabaseException> { users.insert(RepositoryUser(1, "Repository")) }
         assertFailsWith<DatabaseException> { db.insert(RepositoryUser(1, "Model")) }
@@ -63,23 +73,33 @@ class RepositoryTest {
     }
 
     @Test
-    fun `repository validates key metadata and exact ID types at creation`() {
+    fun `generated support validates adapter availability and ID metadata`() {
         val db = Database.inMemory()
-        assertFailsWith<DatabaseException> { db.repository<RepositoryUser, String>() }
-        assertFailsWith<DatabaseException> { db.repository<RepositorySetting, Int>() }
-        assertFailsWith<DatabaseException> { db.repository<RepositoryUser, Any>() }
-        assertFailsWith<DatabaseException> { db.repository<ModelUser, Int>() }
-        assertFailsWith<DatabaseException> { db.repository<Unregistered, Int>() }
+        assertFailsWith<DatabaseException> { kokodb.mapping.RepositorySupport(db, RepositoryUser::class, String::class) }
+        assertFailsWith<DatabaseException> { kokodb.mapping.RepositorySupport(db, ModelUser::class, Int::class) }
+        assertFailsWith<DatabaseException> { kokodb.mapping.RepositorySupport(db, Unregistered::class, Int::class) }
+    }
+
+    @Test
+    fun `services depend on declared repositories without a database reference`() {
+        val db = Database.inMemory()
+        val users = UserRepository(db)
+        val service = UserService(users)
+        users.insert(RepositoryUser(1, "Original"))
+        assertEquals(1, service.rename(1, "Renamed"))
+        assertEquals(RepositoryUser(1, "Renamed"), users.findById(1))
+        assertEquals(0, service.rename(2, "Absent"))
     }
 
     @Test
     fun `repositories can specialize queries and share only their database instance`() {
         val db = Database.inMemory()
         val custom = UserRepository(db)
-        val other = db.repository<RepositoryUser, Int>()
-        val isolated = Database.inMemory().repository<RepositoryUser, Int>()
+        val other = OtherUserRepository(db)
+        val isolated = UserRepository(Database.inMemory())
         val query = custom.query().where(RepositoryUser::name eq "Koko")
         custom.insert(RepositoryUser(1, "Koko"))
+        assertEquals(1, custom.count)
         assertEquals(custom.named("Koko"), query.toList())
         other.update(RepositoryUser(1, "Changed"))
         assertTrue(query.toList().isEmpty())
@@ -89,7 +109,7 @@ class RepositoryTest {
 
     @Test
     fun `insert update and results keep stored data detached`() {
-        val users = Database.inMemory().repository<RepositoryUser, Int>()
+        val users = UserRepository(Database.inMemory())
         val input = RepositoryUser(1, "Original")
         users.insert(input)
         input.name = "External"
@@ -104,7 +124,7 @@ class RepositoryTest {
 
     @Test
     fun `random CRUD operations agree with a reference map`() {
-        val users = Database.inMemory().repository<RepositoryUser, Int>()
+        val users = UserRepository(Database.inMemory())
         val expected = mutableMapOf<Int, RepositoryUser>()
         val random = Random(7281)
         repeat(300) { step ->
