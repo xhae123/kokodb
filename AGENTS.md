@@ -1,10 +1,10 @@
 # Project Goal
 
-Everything you need for a small SQL database, in one simple Kotlin library.
+Everything you need for a small database, in one simple Kotlin library.
 
-Build a lightweight embedded SQL database for Kotlin/JVM that provides storage, SQL execution, parameter binding, and result mapping through a direct Kotlin API, without a separate database server or JDBC.
+Build a lightweight embedded database for Kotlin/JVM whose primary interface is `db[key] = value` and `db[key]`. Keep ordinary key-value use independent of model classes, schemas, annotations, code generation, or a separate database server.
 
-Keep the primary model API free of manual table definitions, per-model registration, table creation calls, and row mappers. Generate and discover these details from `@DbTable` models.
+String keys and heterogeneous values provide a simple `Any?` lookup API. Document supported value types, null behavior, copying, and persistence guarantees explicitly. Existing SQL and model APIs are additional interfaces rather than requirements for key-value use.
 
 # General Principles
 

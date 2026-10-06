@@ -6,6 +6,7 @@ import kokodb.mapping.ModelProvider
 import kokodb.query.Statement
 import kokodb.sql.Parser
 import kokodb.storage.Catalog
+import kokodb.storage.MemoryKeyValueStore
 import java.util.ServiceLoader
 
 /**
@@ -13,8 +14,23 @@ import java.util.ServiceLoader
  * Named parameters accept Int or String values; invalid SQL or execution throws [DatabaseException].
  */
 class Database private constructor(classLoader: ClassLoader) {
+    private val keyValues = MemoryKeyValueStore()
     private val executor = Executor(Catalog())
     private val models = mutableMapOf<Class<*>, ModelAdapter<*>>()
+
+    /** Reads a value by its exact key. Missing keys and stored null values both return null. */
+    operator fun get(key: String): Any? = keyValues.get(key)
+
+    /** Stores a scalar, ByteArray, or null, replacing the previous value. Unsupported values fail before mutation. */
+    operator fun set(key: String, value: Any?) {
+        keyValues.set(key, value)
+    }
+
+    /** Distinguishes a stored null from a missing key through `key in database`. */
+    operator fun contains(key: String): Boolean = keyValues.contains(key)
+
+    /** Removes a key and returns its previous value, or null if missing or previously null. */
+    fun remove(key: String): Any? = keyValues.remove(key)
 
     init {
         val providers = ServiceLoader.load(ModelProvider::class.java, classLoader)
