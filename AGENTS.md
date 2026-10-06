@@ -1,10 +1,19 @@
 # Project Goal
 
-Everything you need for a small database, in one simple Kotlin library.
+Everything you need for a small SQL database, in one simple Kotlin library.
 
-Build a lightweight embedded database for Kotlin/JVM whose primary interface is `db[key] = value` and `db[key]`. Keep ordinary key-value use independent of model classes, schemas, annotations, code generation, or a separate database server.
+Build a lightweight embedded relational database for Kotlin/JVM with a Kotlin-native model API and a shared SQL execution engine, without JDBC or a separate database server. Model declarations should provide enough information to generate schemas and mappings without manual table registration.
 
-String keys and heterogeneous values provide a simple `Any?` lookup API. Document supported value types, null behavior, copying, and persistence guarantees explicitly. Existing SQL and model APIs are additional interfaces rather than requirements for key-value use.
+Key-value storage and general-purpose object serialization are no longer the product direction. Distinguish implemented capabilities from planned APIs and document storage guarantees explicitly.
+
+# Naming and Model Conventions
+
+- Call a Kotlin type mapped to a relational table a model. Use domain names such as `User` and `Order`; do not require `Entity`, `Model`, or `Record` suffixes.
+- A model declares persisted data. Do not require a separate domain class with the same fields or expose generated table descriptors in ordinary model usage.
+- Call a stored table entry a row. Reserve `Table` and `Column` for relational schema concepts and their lower-level APIs.
+- Use `Repository` for a model-specific persistence abstraction, with names such as `UserRepository`. A repository manages a model through a type parameter; it does not inherit from the model.
+- Keep persistence operations separate from model instances. Do not require models to inherit a persistence base class.
+- The current annotation is `@DbTable`. Repository APIs are planned and are not implemented yet; examples must make that distinction clear.
 
 # General Principles
 
