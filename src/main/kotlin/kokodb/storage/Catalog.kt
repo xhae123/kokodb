@@ -9,6 +9,7 @@ internal class Catalog {
         if (name in tables) throw DatabaseException("Table '$name' already exists")
         val duplicate = columns.groupingBy { it.name }.eachCount().entries.firstOrNull { it.value > 1 }
         if (duplicate != null) throw DatabaseException("Duplicate column '${duplicate.key}'")
+        if (columns.count { it.primaryKey } > 1) throw DatabaseException("Only one primary key column is supported")
         tables[name] = Table(columns)
     }
 

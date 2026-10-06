@@ -67,13 +67,22 @@ private class KokoProcessor(private val generator: CodeGenerator, private val lo
                     logger.error("@DbTable properties must be public non-null Int/String values with ASCII identifiers", parameter)
                     return@map null
                 }
-                Field(fieldName, if (typeName == "kotlin.Int") "Int" else "String")
+                Field(fieldName, if (typeName == "kotlin.Int") "Int" else "String", hasId(parameter) || hasId(property))
             }
             if (fields.isEmpty() || fields.any { it == null }) {
                 if (fields.isEmpty()) logger.error("@DbTable requires at least one property", model)
                 continue
             }
             val validFields = fields.filterNotNull()
+            val storedNames = validFields.map { it.name }.toSet()
+            if (properties.values.any { hasId(it) && it.simpleName.asString() !in storedNames }) {
+                logger.error("@Id must annotate a stored constructor property", model)
+                continue
+            }
+            if (validFields.count { it.primaryKey } > 1) {
+                logger.error("Only one @Id property is supported", model)
+                continue
+            }
             if (validFields.map { it.name.lowercase(Locale.ROOT) }.distinct().size != validFields.size) {
                 logger.error("Duplicate column names after case normalization", model)
                 continue
@@ -110,15 +119,27 @@ private class KokoProcessor(private val generator: CodeGenerator, private val lo
         appendLine("    private object Schema : Table(\"$table\") {")
         fields.forEachIndexed { index, field ->
             val factory = if (field.type == "Int") "int" else "text"
-            appendLine("        val column$index = $factory(\"${field.name}\")")
+            appendLine("        val column$index = $factory(\"${field.name}\", primaryKey = ${field.primaryKey})")
         }
         appendLine("    }")
         appendLine("    override val modelClass: Class<$modelType> = $modelType::class.java")
         appendLine("    override val table: Table = Schema")
+        val keyIndex = fields.indexOfFirst { it.primaryKey }
+        val key = fields.getOrNull(keyIndex)
+        appendLine("    override val primaryKey: Column<*>? = ${if (key == null) "null" else "Schema.column$keyIndex"}")
         appendLine("    override fun adapters(): List<ModelAdapter<*>> = listOf(this)")
         appendLine("    override fun insert(database: Database, model: $modelType): Int = database.insertInto(Schema) {")
         fields.forEachIndexed { index, field -> appendLine("        set(Schema.column$index, model.`${field.name}`)") }
         appendLine("    }")
+        if (key != null) {
+            appendLine("    override fun update(database: Database, model: $modelType): Int =")
+            appendLine("        database.replaceIn(Schema, Schema.column$keyIndex eq model.`${key.name}`) {")
+            fields.forEachIndexed { index, field -> appendLine("            set(Schema.column$index, model.`${field.name}`)") }
+            appendLine("        }")
+        } else {
+            appendLine("    override fun update(database: Database, model: $modelType): Int =")
+            appendLine("        throw DatabaseException(\"Model requires one @Id property for update\")")
+        }
         appendLine("    override fun read(row: Row): $modelType = $modelType(")
         fields.forEachIndexed { index, field -> appendLine("        `${field.name}` = row[Schema.column$index],") }
         appendLine("    )")
@@ -135,5 +156,8 @@ private class KokoProcessor(private val generator: CodeGenerator, private val lo
     private fun identifier(value: String) = value.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))
     private fun isPublic(modifiers: Set<Modifier>) =
         modifiers.none { it == Modifier.PRIVATE || it == Modifier.INTERNAL || it == Modifier.PROTECTED }
-    private data class Field(val name: String, val type: String)
+    private fun hasId(symbol: KSAnnotated): Boolean = symbol.annotations.any {
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == "kokodb.Id"
+    }
+    private data class Field(val name: String, val type: String, val primaryKey: Boolean)
 }

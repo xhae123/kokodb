@@ -38,7 +38,9 @@ internal class Parser(sql: String) {
                 keyword("TEXT") -> DataType.TEXT
                 else -> fail("Expected INT or TEXT")
             }
-            Column(name, type)
+            val primaryKey = keyword("PRIMARY")
+            if (primaryKey) expectKeyword("KEY")
+            Column(name, type, primaryKey)
         }
         expect(TokenKind.RIGHT_PAREN)
         return Statement.CreateTable(table, columns)

@@ -8,6 +8,7 @@ class Column<T : Any> internal constructor(
     internal val table: Table,
     val name: String,
     internal val type: DataType,
+    internal val primaryKey: Boolean,
     internal val encode: (T) -> Value,
     private val decode: (Value) -> T,
 ) {

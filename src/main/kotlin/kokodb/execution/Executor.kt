@@ -2,6 +2,7 @@ package kokodb.execution
 
 import kokodb.DatabaseException
 import kokodb.Row
+import kokodb.query.Equality
 import kokodb.query.Expression
 import kokodb.query.Projection
 import kokodb.query.Statement
@@ -19,14 +20,30 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
             validateSchema(table, statement.expectedSchema)
-            if (statement.values.size != table.columns.size) {
-                throw DatabaseException("Table '${statement.table}' expects ${table.columns.size} values, got ${statement.values.size}")
-            }
-            val values = statement.values.zip(table.columns).map { (expression, column) ->
-                resolve(expression, params).also { validateType(column, it) }
-            }
+            val values = resolveRow(table, statement.values, params)
+            validateKeys(table, table.rows.asSequence() + sequenceOf(values))
             table.rows.add(values)
             1
+        }
+        is Statement.Replace -> {
+            val table = catalog.table(statement.table)
+            validateSchema(table, statement.expectedSchema)
+            val values = resolveRow(table, statement.values, params)
+            val filter = resolveFilter(table, statement.condition, params)
+            val indices = table.rows.indices.filter { table.rows[it][filter.first] == filter.second }
+            val affected = indices.toSet()
+            // Validate the complete resulting table before changing any row, including multi-row collisions.
+            validateKeys(table, table.rows.asSequence().mapIndexed { index, row -> if (index in affected) values else row })
+            indices.forEach { table.rows[it] = values }
+            indices.size
+        }
+        is Statement.Delete -> {
+            val table = catalog.table(statement.table)
+            validateSchema(table, statement.expectedSchema)
+            val filter = resolveFilter(table, statement.condition, params)
+            val before = table.rows.size
+            table.rows.removeAll { it[filter.first] == filter.second }
+            before - table.rows.size
         }
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
     }
@@ -47,12 +64,7 @@ internal class Executor(private val catalog: Catalog) {
             }
         }
         // Resolve and validate before scanning so invalid queries also fail on empty tables.
-        val filter = statement.condition?.let { condition ->
-            val index = columnIndex(table, condition.column)
-            val value = resolve(condition.value, params)
-            validateType(table.columns[index], value)
-            index to value
-        }
+        val filter = statement.condition?.let { resolveFilter(table, it, params) }
         return table.rows.asSequence()
             .filter { row -> filter == null || row[filter.first] == filter.second }
             .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] }, statement.table)) }
@@ -62,6 +74,31 @@ internal class Executor(private val catalog: Catalog) {
     private fun validateSchema(table: Table, expected: List<Column>?) {
         if (expected != null && table.columns != expected) {
             throw DatabaseException("Kotlin table definition does not match the stored schema")
+        }
+    }
+
+    private fun resolveRow(table: Table, expressions: List<Expression>, params: Map<String, Any?>): List<Value> {
+        if (expressions.size != table.columns.size) {
+            throw DatabaseException("Table expects ${table.columns.size} values, got ${expressions.size}")
+        }
+        return expressions.zip(table.columns).map { (expression, column) ->
+            resolve(expression, params).also { validateType(column, it) }
+        }
+    }
+
+    private fun resolveFilter(table: Table, condition: Equality, params: Map<String, Any?>): Pair<Int, Value> {
+        val index = columnIndex(table, condition.column)
+        val value = resolve(condition.value, params)
+        validateType(table.columns[index], value)
+        return index to value
+    }
+
+    private fun validateKeys(table: Table, rows: Sequence<List<Value>>) {
+        val index = table.columns.indexOfFirst { it.primaryKey }
+        if (index < 0) return
+        val seen = mutableSetOf<Value>()
+        for (row in rows) {
+            if (!seen.add(row[index])) throw DatabaseException("Duplicate primary key for column '${table.columns[index].name}'")
         }
     }
 

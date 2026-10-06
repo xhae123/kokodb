@@ -3,6 +3,8 @@ package kokodb
 import kokodb.execution.Executor
 import kokodb.mapping.ModelAdapter
 import kokodb.mapping.ModelProvider
+import kokodb.query.Equality
+import kokodb.query.Expression
 import kokodb.query.Statement
 import kokodb.sql.Parser
 import kokodb.storage.Catalog
@@ -55,7 +57,7 @@ class Database private constructor(classLoader: ClassLoader) {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <M : Any> adapter(modelClass: Class<M>): ModelAdapter<M> {
+    internal fun <M : Any> adapter(modelClass: Class<M>): ModelAdapter<M> {
         // The registry is keyed by the adapter's exact model class, preserving the erased generic type.
         return (models[modelClass] ?: throw DatabaseException(
             "No generated adapter for '${modelClass.name}'; add @DbTable and configure the KokoDB KSP processor"
@@ -80,6 +82,24 @@ class Database private constructor(classLoader: ClassLoader) {
         val schema = table.schema()
         val builder = InsertBuilder(table).apply(assign)
         return executor.execute(Statement.Insert(table.tableName, builder.expressions(), schema), emptyMap())
+    }
+
+    /** Replaces every matching row with a complete row. Validation and key conflicts fail before mutation. */
+    fun replaceIn(table: Table, condition: Condition, assign: InsertBuilder.() -> Unit): Int {
+        val filter = equality(table, condition)
+        val schema = table.schema()
+        val values = InsertBuilder(table).apply(assign).expressions()
+        return executor.execute(Statement.Replace(table.tableName, values, filter, schema), emptyMap())
+    }
+
+    /** Deletes matching rows and returns their count. A condition is required. */
+    fun deleteFrom(table: Table, condition: Condition): Int = executor.execute(
+        Statement.Delete(table.tableName, equality(table, condition), table.schema()), emptyMap()
+    )
+
+    private fun equality(table: Table, condition: Condition): Equality {
+        if (condition.column.table !== table) throw DatabaseException("Condition belongs to another table")
+        return Equality(condition.column.name, Expression.Literal(condition.value))
     }
 
     /** Starts a lazy query selecting all columns. Validation of stored schema occurs on execution. */

@@ -16,6 +16,17 @@ internal sealed interface Statement {
         val condition: Equality?,
         val expectedSchema: List<Column>? = null,
     ) : Statement
+    data class Replace(
+        val table: String,
+        val values: List<Expression>,
+        val condition: Equality,
+        val expectedSchema: List<Column>,
+    ) : Statement
+    data class Delete(
+        val table: String,
+        val condition: Equality,
+        val expectedSchema: List<Column>,
+    ) : Statement
 }
 
 internal sealed interface Projection {

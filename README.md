@@ -15,15 +15,18 @@ Declare a model once. The processor generates its schema and object mapper; open
 ```kotlin
 import kokodb.Database
 import kokodb.DbTable
+import kokodb.Id
 import kokodb.eq
+import kokodb.repository
 
 @DbTable("users")
-data class User(val id: Int, val name: String)
+data class User(@Id val id: Int, val name: String)
 
 val db = Database.inMemory()
-db.insert(User(1, "Koko"))
+val repository = db.repository<User, Int>()
+repository.insert(User(1, "Koko"))
 
-val users: List<User> = db.from<User>()
+val users: List<User> = repository.query()
     .where(User::id eq 1)
     .toList()
 
@@ -36,7 +39,50 @@ There is no per-model registration, manual table definition, table creation call
 
 A model is a Kotlin type mapped to a relational table. Name it after the domain concept, such as `User` or `Order`, without a required `Entity`, `Model`, or `Record` suffix. A row is one stored entry; a table defines the relational schema.
 
-Model-specific persistence operations will belong to repositories such as `UserRepository`. A repository manages a model through a type parameter and does not inherit from it. Repository APIs are planned; the implemented model API currently uses `Database.insert()` and `Database.from<Model>()`.
+A repository manages a model through a type parameter and does not inherit from it. Use `db.repository<User, Int>()` for ordinary persistence operations. Add a named repository only when custom operations are useful:
+
+```kotlin
+import kokodb.Repository
+
+class UserRepository(db: Database) : Repository<User, Int>(db, User::class, Int::class) {
+    fun named(name: String): List<User> = query().where(User::name eq name).toList()
+}
+```
+
+## Repository contracts
+
+```kotlin
+repository.findById(1)                       // User?; null when absent
+repository.update(User(1, "Updated"))       // 1 when present, 0 when absent
+repository.findAll()                         // detached List<User>
+repository.deleteById(1)                     // 1 when removed, 0 when absent
+```
+
+- Declare exactly one `@Id` constructor property when using a repository. Int and String keys are supported; callers supply their values. Keys are case-sensitive values, not identifiers.
+- Models without `@Id` remain usable through `Database.insert()` and `Database.from<Model>()`. Repository construction rejects missing keys, missing adapters, and a mismatched ID type.
+- Duplicate primary keys fail before mutation through SQL, model, and repository insertion alike. Key metadata is part of stored schema validation.
+- `update(model)` replaces the complete row identified by that model's key. It does not insert an absent row, change another row's key, or perform automatic dirty checking. Use separate insert and update operations instead of an ambiguous save operation.
+- Models and query results are detached. Mutating an input or returned object never writes to storage; call `update()` explicitly.
+- Repository queries reuse the typed model query API. Each terminal call observes current data. Repositories for the same database and model share rows; separate database instances are isolated.
+- Composite keys, generated keys, foreign keys, transactions, and disk persistence are not implemented. Lookups and key validation currently scan rows.
+
+```mermaid
+sequenceDiagram
+    participant App as Kotlin application
+    participant Repo as Repository<User, Int>
+    participant Adapter as Generated model adapter
+    participant Engine as Shared executor
+    participant Rows as In-memory relational table
+    App->>Repo: update(User(1, "Updated"))
+    Repo->>Adapter: Encode model and primary-key condition
+    Adapter->>Engine: Replace complete matching row
+    Engine->>Engine: Validate schema, values, and resulting keys
+    Engine->>Rows: Apply validated replacement
+    Rows-->>Engine: Replacement applied
+    Engine-->>Adapter: Affected row count
+    Adapter-->>Repo: Affected row count
+    Repo-->>App: Affected row count
+```
 
 ## Build setup
 
@@ -94,8 +140,9 @@ check(rows.single().getString("name") == "Koko")
 
 ## Kotlin DSL contracts
 
+- `int(name, primaryKey = true)` or `text(name, primaryKey = true)` declares a single-column primary key. `replaceIn(table, condition) { ... }` requires a complete row and rejects conflicting keys before mutation; `deleteFrom(table, condition)` removes matching rows. These operations return affected row counts and require a condition. SQL UPDATE and DELETE syntax is not implemented.
 - `int()` and `text()` define non-null `Column<Int>` and `Column<String>` values. Names are normalized to lowercase; definitions freeze on first database use.
-- `createTable()` creates a table with the declared columns. SQL-created tables can be used with the DSL when their ordered names and types exactly match the Kotlin definition.
+- `createTable()` creates a table with the declared columns. SQL-created tables can be used with the DSL when their ordered names, types, and primary-key metadata exactly match the Kotlin definition.
 - `insertInto()` requires one assignment per declared column in any order. Missing, duplicate, or foreign assignments fail without inserting a row.
 - `from()` starts an immutable query selecting all columns. `select()` chooses columns from the same definition, and `where()` sets one equality predicate, replacing any previous predicate.
 - `toList()` returns detached rows; `map()` transforms each row during execution without building an intermediate result list. Each terminal call reads the current database state; do not mutate the database inside a mapper.
@@ -104,7 +151,7 @@ check(rows.single().getString("name") == "Koko")
 
 ## Supported behavior
 
-- SQL: `CREATE TABLE`, single-row `INSERT INTO ... VALUES (...)`, and `SELECT` with `*` or named columns and an optional single equality condition.
+- SQL: `CREATE TABLE` with optional column-level `PRIMARY KEY`, single-row `INSERT INTO ... VALUES (...)`, and `SELECT` with `*` or named columns and an optional single equality condition.
 - Values: `INT` (Kotlin `Int`, signed 32-bit) and `TEXT` (Kotlin `String`). String literals escape quotes with `''`; `NULL` and implicit type conversions are unsupported.
 - Names: ASCII identifiers (`[A-Za-z_][A-Za-z0-9_]*`); keywords, table names, and column names are case-insensitive. Quoted identifiers are unsupported.
 - Parameters: `:name` binds an `Int` or `String` as a value. Names are case-sensitive; missing parameters fail and unused parameters are ignored.

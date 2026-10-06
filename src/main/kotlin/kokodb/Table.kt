@@ -11,12 +11,12 @@ open class Table(name: String) {
     private val registered = mutableListOf<Column<*>>()
     private var frozen = false
 
-    protected fun int(name: String): Column<Int> = register(
-        name, DataType.INT, { Value.IntValue(it) }, { (it as Value.IntValue).value }
+    protected fun int(name: String, primaryKey: Boolean = false): Column<Int> = register(
+        name, DataType.INT, primaryKey, { Value.IntValue(it) }, { (it as Value.IntValue).value }
     )
 
-    protected fun text(name: String): Column<String> = register(
-        name, DataType.TEXT, { Value.TextValue(it) }, { (it as Value.TextValue).value }
+    protected fun text(name: String, primaryKey: Boolean = false): Column<String> = register(
+        name, DataType.TEXT, primaryKey, { Value.TextValue(it) }, { (it as Value.TextValue).value }
     )
 
     internal fun columns(): List<Column<*>> {
@@ -25,18 +25,20 @@ open class Table(name: String) {
         return registered.toList()
     }
 
-    internal fun schema(): List<StoredColumn> = columns().map { StoredColumn(it.name, it.type) }
+    internal fun schema(): List<StoredColumn> = columns().map { StoredColumn(it.name, it.type, it.primaryKey) }
 
     private fun <T : Any> register(
         name: String,
         type: DataType,
+        primaryKey: Boolean,
         encode: (T) -> Value,
         decode: (Value) -> T,
     ): Column<T> {
         if (frozen) throw DatabaseException("Table '$tableName' definition is frozen")
         val normalized = identifier(name)
         if (registered.any { it.name == normalized }) throw DatabaseException("Duplicate column '$normalized'")
-        return Column(this, normalized, type, encode, decode).also { registered.add(it) }
+        if (primaryKey && registered.any { it.primaryKey }) throw DatabaseException("Only one primary key column is supported")
+        return Column(this, normalized, type, primaryKey, encode, decode).also { registered.add(it) }
     }
 }
 

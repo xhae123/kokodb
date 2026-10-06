@@ -1,6 +1,7 @@
 package kokodb.mapping
 
 import kokodb.Condition
+import kokodb.Column
 import kokodb.Database
 import kokodb.Row
 import kokodb.Table
@@ -10,7 +11,9 @@ import kotlin.reflect.KProperty1
 interface ModelAdapter<M : Any> {
     val modelClass: Class<M>
     val table: Table
+    val primaryKey: Column<*>?
     fun insert(database: Database, model: M): Int
+    fun update(database: Database, model: M): Int
     fun read(row: Row): M
     fun condition(property: KProperty1<M, *>, value: Any): Condition
 }
