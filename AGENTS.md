@@ -4,6 +4,8 @@ Everything you need for a small SQL database, in one simple Kotlin library.
 
 Build a lightweight embedded SQL database for Kotlin/JVM that provides storage, SQL execution, parameter binding, and result mapping through a direct Kotlin API, without a separate database server or JDBC.
 
+Keep the primary model API free of manual table definitions, per-model registration, table creation calls, and row mappers. Generate and discover these details from `@DbTable` models.
+
 # General Principles
 
 - State the conclusion first and briefly explain the key reasons.

@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.3.20"
     `java-library`
+    id("com.google.devtools.ksp") version "2.3.10"
 }
 
 group = "io.github.xhae123"
@@ -20,6 +21,7 @@ dependencies {
     testImplementation(kotlin("compiler-embeddable"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    kspTest(project(":processor"))
 }
 
 tasks.test {

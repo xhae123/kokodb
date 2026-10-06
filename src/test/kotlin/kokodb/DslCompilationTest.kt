@@ -67,4 +67,32 @@ class DslCompilationTest {
         )
         for ((name, code) in invalid) compile(name, code, ExitCode.COMPILATION_ERROR)
     }
+
+    @Test
+    fun `model property queries compile without table references`() {
+        compile("ModelValid", """
+            @DbTable("models")
+            data class Model(val id: Int, val name: String)
+            fun usage(db: Database): List<Model> {
+                db.insert(Model(1, "Koko"))
+                return db.from<Model>().where(Model::id eq 1).toList()
+            }
+        """.trimIndent(), ExitCode.OK)
+    }
+
+    @Test
+    fun `model predicates reject incompatible values and model owners`() {
+        val models = """
+            data class Model(val id: Int, val name: String)
+            data class Other(val id: Int)
+        """.trimIndent()
+        val invalid = mapOf(
+            "ModelValue" to "val condition = Model::id eq \"one\"",
+            "ModelText" to "val condition = Model::name eq 1",
+            "ModelNull" to "val condition = Model::id eq null",
+            "ModelLong" to "val condition = Model::id eq 1L",
+            "ModelOwner" to "fun usage(db: Database) { db.from<Model>().where(Other::id eq 1) }",
+        )
+        for ((name, code) in invalid) compile(name, "$models\n$code", ExitCode.COMPILATION_ERROR)
+    }
 }
