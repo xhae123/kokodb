@@ -2,9 +2,9 @@ package kokodb.execution
 
 import kokodb.DatabaseException
 import kokodb.Row
-import kokodb.sql.Expression
-import kokodb.sql.Projection
-import kokodb.sql.Statement
+import kokodb.query.Expression
+import kokodb.query.Projection
+import kokodb.query.Statement
 import kokodb.storage.Catalog
 import kokodb.storage.Column
 import kokodb.storage.Table
@@ -18,6 +18,7 @@ internal class Executor(private val catalog: Catalog) {
         }
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
+            validateSchema(table, statement.expectedSchema)
             if (statement.values.size != table.columns.size) {
                 throw DatabaseException("Table '${statement.table}' expects ${table.columns.size} values, got ${statement.values.size}")
             }
@@ -30,9 +31,12 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
     }
 
-    fun query(statement: Statement, params: Map<String, Any?>): List<Row> {
+    fun query(statement: Statement, params: Map<String, Any?>): List<Row> = queryMapped(statement, params) { it }
+
+    fun <R> queryMapped(statement: Statement, params: Map<String, Any?>, transform: (Row) -> R): List<R> {
         if (statement !is Statement.Select) throw DatabaseException("Use execute() for CREATE TABLE or INSERT")
         val table = catalog.table(statement.table)
+        validateSchema(table, statement.expectedSchema)
         val indices = when (val projection = statement.projection) {
             Projection.All -> table.columns.indices.toList()
             is Projection.Columns -> {
@@ -51,8 +55,14 @@ internal class Executor(private val catalog: Catalog) {
         }
         return table.rows.asSequence()
             .filter { row -> filter == null || row[filter.first] == filter.second }
-            .map { row -> Row(indices.associate { table.columns[it].name to row[it] }) }
+            .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] }, statement.table)) }
             .toList()
+    }
+
+    private fun validateSchema(table: Table, expected: List<Column>?) {
+        if (expected != null && table.columns != expected) {
+            throw DatabaseException("Kotlin table definition does not match the stored schema")
+        }
     }
 
     private fun columnIndex(table: Table, name: String): Int {

@@ -17,6 +17,7 @@ kotlin {
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
     testImplementation(kotlin("test-junit5"))
+    testImplementation(kotlin("compiler-embeddable"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

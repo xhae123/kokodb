@@ -1,12 +1,21 @@
-package kokodb.sql
+package kokodb.query
 
 import kokodb.storage.Column
 import kokodb.storage.Value
 
 internal sealed interface Statement {
     data class CreateTable(val table: String, val columns: List<Column>) : Statement
-    data class Insert(val table: String, val values: List<Expression>) : Statement
-    data class Select(val table: String, val projection: Projection, val condition: Equality?) : Statement
+    data class Insert(
+        val table: String,
+        val values: List<Expression>,
+        val expectedSchema: List<Column>? = null,
+    ) : Statement
+    data class Select(
+        val table: String,
+        val projection: Projection,
+        val condition: Equality?,
+        val expectedSchema: List<Column>? = null,
+    ) : Statement
 }
 
 internal sealed interface Projection {

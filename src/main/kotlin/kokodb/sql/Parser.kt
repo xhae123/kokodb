@@ -1,6 +1,10 @@
 package kokodb.sql
 
 import kokodb.SqlSyntaxException
+import kokodb.query.Equality
+import kokodb.query.Expression
+import kokodb.query.Projection
+import kokodb.query.Statement
 import kokodb.storage.Column
 import kokodb.storage.DataType
 import kokodb.storage.Value

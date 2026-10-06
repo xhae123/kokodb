@@ -1,6 +1,7 @@
 package kokodb
 
 import kokodb.execution.Executor
+import kokodb.query.Statement
 import kokodb.sql.Parser
 import kokodb.storage.Catalog
 
@@ -18,6 +19,24 @@ class Database private constructor() {
     /** Executes one SELECT and returns detached rows with no guaranteed order. */
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
         executor.query(Parser(sql).parse(), params)
+
+    /** Creates a table from its Kotlin schema. An existing table is an error. */
+    fun createTable(table: Table) {
+        executor.execute(Statement.CreateTable(table.tableName, table.schema()), emptyMap())
+    }
+
+    /** Inserts one row after all assignments and the stored schema have been validated. Returns 1. */
+    fun insertInto(table: Table, assign: InsertBuilder.() -> Unit): Int {
+        val schema = table.schema()
+        val builder = InsertBuilder(table).apply(assign)
+        return executor.execute(Statement.Insert(table.tableName, builder.expressions(), schema), emptyMap())
+    }
+
+    /** Starts a lazy query selecting all columns. Validation of stored schema occurs on execution. */
+    fun from(table: Table): Query {
+        table.columns()
+        return Query(executor, table)
+    }
 
     companion object {
         fun inMemory(): Database = Database()
