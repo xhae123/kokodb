@@ -1,6 +1,7 @@
 package kokodb.sql
 
 import kokodb.SqlSyntaxException
+import kokodb.query.Assignment
 import kokodb.query.Equality
 import kokodb.query.Expression
 import kokodb.query.Projection
@@ -20,7 +21,9 @@ internal class Parser(sql: String) {
             keyword("CREATE") -> parseCreate()
             keyword("INSERT") -> parseInsert()
             keyword("SELECT") -> parseSelect()
-            else -> fail("Expected CREATE, INSERT, or SELECT")
+            keyword("UPDATE") -> parseUpdate()
+            keyword("DELETE") -> parseDelete()
+            else -> fail("Expected CREATE, INSERT, SELECT, UPDATE, or DELETE")
         }
         accept(TokenKind.SEMICOLON)
         expect(TokenKind.END)
@@ -61,13 +64,30 @@ internal class Parser(sql: String) {
         else Projection.Columns(commaSeparated { identifier() })
         expectKeyword("FROM")
         val table = identifier()
-        val condition = if (keyword("WHERE")) {
+        return Statement.Select(table, projection, condition())
+    }
+
+    private fun parseUpdate(): Statement.Update {
+        val table = identifier()
+        expectKeyword("SET")
+        val assignments = commaSeparated {
             val column = identifier()
             expect(TokenKind.EQUALS)
-            Equality(column, expression())
-        } else null
-        return Statement.Select(table, projection, condition)
+            Assignment(column, expression())
+        }
+        return Statement.Update(table, assignments, condition())
     }
+
+    private fun parseDelete(): Statement.Delete {
+        expectKeyword("FROM")
+        return Statement.Delete(identifier(), condition())
+    }
+
+    private fun condition(): Equality? = if (keyword("WHERE")) {
+        val column = identifier()
+        expect(TokenKind.EQUALS)
+        Equality(column, expression())
+    } else null
 
     private fun expression(): Expression {
         val token = current

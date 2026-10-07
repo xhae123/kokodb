@@ -51,6 +51,26 @@ class KokoDbTest {
     }
 
     @Test
+    fun `typed queries observe atomic SQL updates and deletes`() {
+        register(1, "Original")
+        register(2, "Other")
+        val detached = find(1).single()
+        assertEquals(1, KokoDb.execute(
+            "UPDATE shared_users SET name = :name WHERE id = :id",
+            mapOf("name" to "Updated", "id" to 1),
+        ))
+        assertEquals(listOf(SharedUser(1, "Updated")), find(1))
+        assertEquals("Original", detached.name)
+        assertFailsWith<DatabaseException> {
+            KokoDb.execute("UPDATE shared_users SET id = 2, name = 'Rejected' WHERE id = 1")
+        }
+        assertEquals(listOf(SharedUser(1, "Updated")), find(1))
+        assertEquals(1, KokoDb.execute("DELETE FROM shared_users WHERE id = :id", mapOf("id" to 1)))
+        assertTrue(find(1).isEmpty())
+        assertEquals(listOf(SharedUser(2, "Other")), find(2))
+    }
+
+    @Test
     fun `typed SQL accepts reordered columns case insensitive names and bound values`() {
         val name = "Koko' OR id = 2"
         register(1, name)

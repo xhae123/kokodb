@@ -15,6 +15,7 @@ Key-value storage and general-purpose object serialization are no longer the pro
 - Use `@DbTable` for generated table mapping and optional `@Id` for a caller-supplied single-column primary key. Keep models detached and writes explicit. Typed SQL currently requires complete mapped models; do not imply arbitrary DTO mapping, automatic dirty checking, generated keys, or transactions.
 - Use `KokoDb<Model>(sql, params)` in primary examples, `KokoDb.execute()` for SQL writes, and `KokoDb.query()` for raw rows. Do not require application database wrappers, services, or repositories.
 - KokoDb lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Do not describe multiple serialized calls as a transaction.
+- Preserve statement atomicity: validate complete candidate state before publishing writes, including primary-key changes across multiple rows. Keep the proposed transaction and persistence contract in `docs/transactions-and-persistence.md` distinct from implemented guarantees.
 
 # General Principles
 

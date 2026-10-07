@@ -42,7 +42,7 @@ No application database wrapper, service class, repository declaration, or manua
 - Models must be public top-level non-generic data classes with public constructors and public non-null Int/String constructor properties. Computed properties are not stored.
 - SELECT must use the model's table and include each stored property exactly once, or use `*`. Column order may differ from constructor order. Wrong tables, incomplete/duplicate projections, incompatible schemas, and invalid parameters fail even when no rows match.
 - Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
-- `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before insertion, including SQL insertion. A key is not required for typed queries.
+- `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before INSERT or UPDATE changes any rows. A key is not required for typed queries.
 - SQL identifiers are case-insensitive. String values and parameter names remain case-sensitive. Parameters bind Int/String values; null and implicit type conversion are unsupported.
 - Input SQL and stored schemas are validated at execution time. Kotlin checks result assignment types, not SQL text.
 - Mutating a returned model does not write to the database. There is no automatic dirty checking.
@@ -61,7 +61,18 @@ val count = KokoDb.query("SELECT value FROM settings WHERE name = :name", mapOf(
     .single().getInt("value")
 ```
 
-`execute()` returns 0 for CREATE TABLE and 1 for INSERT. `query()` returns `List<Row>`; getters reject missing or mistyped columns. Typed and raw calls use the same catalog and engine.
+```kotlin
+val updated = KokoDb.execute(
+    "UPDATE settings SET value = :value WHERE name = :name",
+    mapOf("value" to 4, "name" to "count"),
+)
+val deleted = KokoDb.execute("DELETE FROM settings WHERE name = :name", mapOf("name" to "count"))
+check(updated == 1 && deleted == 1)
+```
+
+`execute()` returns 0 for CREATE TABLE, 1 for INSERT, and the number of matched rows for UPDATE/DELETE. UPDATE counts matches even when their values stay equal. Omitting WHERE updates or deletes all rows. `query()` returns `List<Row>`; getters reject missing or mistyped columns. Typed and raw calls use the same catalog and engine.
+
+Each write statement validates its entire candidate state before publishing changes. Invalid columns, types, parameters, duplicate assignments, or primary-key collisions leave existing rows unchanged, including failures involving multiple matching rows. This is statement atomicity; several calls do not commit or roll back together.
 
 ## Shared database lifetime
 
@@ -132,17 +143,21 @@ sequenceDiagram
     Shared-->>App: List<User>
 ```
 
-The parser builds a shared query representation. The executor validates schemas, resolves parameters, and scans or inserts rows in the in-memory catalog. Generated model mapping uses constructor calls rather than runtime constructor introspection. Mapping runs during the scan without building an intermediate List<Row>.
+The parser builds a shared query representation. The executor validates schemas, resolves parameters, and scans or replaces row snapshots in the in-memory catalog. Generated model mapping uses constructor calls rather than runtime constructor introspection. Mapping runs during the scan without building an intermediate List<Row>.
 
 ## Supported SQL and limitations
 
 - CREATE TABLE with non-null INT/TEXT columns and optional column-level PRIMARY KEY.
 - Single-row INSERT INTO ... VALUES (...).
 - SELECT with `*` or named columns and an optional single equality condition.
+- UPDATE with one or more SET assignments to literals or named parameters, and optional single equality WHERE.
+- DELETE FROM with optional single equality WHERE. Without WHERE, UPDATE/DELETE affect the entire table.
 - ASCII identifiers (`[A-Za-z_][A-Za-z0-9_]*`), signed 32-bit INT literals, TEXT literals escaped with `''`, and `:name` value parameters.
 - One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
 - DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
 
-Disk persistence, transactions, indexes, foreign keys, generated/composite keys, SQL UPDATE/DELETE, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows.
+Disk persistence, transactions, indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
 
-Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, and SQL execution, primary-key constraints, and generated model mapping. GitHub Actions runs the build for pull requests and pushes to main.
+The [transaction and persistence design](docs/transactions-and-persistence.md) specifies future transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. These APIs and storage mechanisms are planned, not implemented.
+
+Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.

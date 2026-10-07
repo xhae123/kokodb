@@ -20,9 +20,41 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
             val values = resolveRow(table, statement.values, params)
-            validateKeys(table, table.rows.asSequence() + sequenceOf(values))
-            table.rows.add(values)
+            val rows = table.rows + listOf(values)
+            validateKeys(table, rows.asSequence())
+            table.publishRows(rows)
             1
+        }
+        is Statement.Update -> {
+            val table = catalog.table(statement.table)
+            if (statement.assignments.map { it.column }.distinct().size != statement.assignments.size) {
+                throw DatabaseException("Duplicate UPDATE assignments are not supported")
+            }
+            val assignments = statement.assignments.associate { assignment ->
+                val index = columnIndex(table, assignment.column)
+                val value = resolve(assignment.value, params)
+                validateType(table.columns[index], value)
+                index to value
+            }
+            val filter = statement.condition?.let { resolveFilter(table, it, params) }
+            var affected = 0
+            val rows = table.rows.map { row ->
+                if (matches(row, filter)) {
+                    affected++
+                    row.mapIndexed { index, value -> assignments[index] ?: value }
+                } else row
+            }
+            validateKeys(table, rows.asSequence())
+            table.publishRows(rows)
+            affected
+        }
+        is Statement.Delete -> {
+            val table = catalog.table(statement.table)
+            val filter = statement.condition?.let { resolveFilter(table, it, params) }
+            val rows = table.rows.filterNot { matches(it, filter) }
+            val affected = table.rows.size - rows.size
+            table.publishRows(rows)
+            affected
         }
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
     }
@@ -30,7 +62,7 @@ internal class Executor(private val catalog: Catalog) {
     fun query(statement: Statement, params: Map<String, Any?>): List<Row> = queryMapped(statement, params) { it }
 
     fun <R> queryMapped(statement: Statement, params: Map<String, Any?>, transform: (Row) -> R): List<R> {
-        if (statement !is Statement.Select) throw DatabaseException("Use execute() for CREATE TABLE or INSERT")
+        if (statement !is Statement.Select) throw DatabaseException("Use execute() for statements other than SELECT")
         val table = catalog.table(statement.table)
         validateSchema(table, statement.expectedSchema)
         val indices = when (val projection = statement.projection) {
@@ -45,10 +77,13 @@ internal class Executor(private val catalog: Catalog) {
         // Resolve and validate before scanning so invalid queries also fail on empty tables.
         val filter = statement.condition?.let { resolveFilter(table, it, params) }
         return table.rows.asSequence()
-            .filter { row -> filter == null || row[filter.first] == filter.second }
+            .filter { row -> matches(row, filter) }
             .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] })) }
             .toList()
     }
+
+    private fun matches(row: List<Value>, filter: Pair<Int, Value>?): Boolean =
+        filter == null || row[filter.first] == filter.second
 
     private fun validateSchema(table: Table, expected: List<Column>?) {
         if (expected != null && table.columns != expected) {

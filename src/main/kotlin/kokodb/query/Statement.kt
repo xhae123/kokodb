@@ -15,6 +15,8 @@ internal sealed interface Statement {
         val condition: Equality?,
         val expectedSchema: List<Column>? = null,
     ) : Statement
+    data class Update(val table: String, val assignments: List<Assignment>, val condition: Equality?) : Statement
+    data class Delete(val table: String, val condition: Equality?) : Statement
 }
 
 internal sealed interface Projection {
@@ -28,3 +30,4 @@ internal sealed interface Expression {
 }
 
 internal data class Equality(val column: String, val value: Expression)
+internal data class Assignment(val column: String, val value: Expression)

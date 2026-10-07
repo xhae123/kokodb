@@ -40,7 +40,7 @@ class Database private constructor(classLoader: ClassLoader) {
         )) as ModelAdapter<M>
     }
 
-    /** Executes one CREATE TABLE or INSERT. Returns 0 for creation and 1 for insertion. */
+    /** Executes one write statement. Returns 0 for CREATE TABLE and matched row counts for INSERT/UPDATE/DELETE. */
     fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
         executor.execute(Parser(sql).parse(), params)
 
@@ -55,7 +55,7 @@ class Database private constructor(classLoader: ClassLoader) {
         params: Map<String, Any?> = emptyMap(),
     ): List<M> {
         val statement = Parser(sql).parse() as? Statement.Select
-            ?: throw DatabaseException("Use execute() for CREATE TABLE or INSERT")
+            ?: throw DatabaseException("Use execute() for statements other than SELECT")
         val adapter = adapter(modelClass)
         if (statement.table != adapter.tableName) {
             throw DatabaseException("SELECT source table does not match model '${modelClass.name}'")

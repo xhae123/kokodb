@@ -19,7 +19,7 @@ object KokoDb {
         params: Map<String, Any?> = emptyMap(),
     ): List<T> = withDatabase { it.queryModels(modelClass, sql, params) }
 
-    /** Executes CREATE TABLE or INSERT against the shared database and returns the affected count. */
+    /** Executes CREATE TABLE, INSERT, UPDATE, or DELETE and returns the affected row count; creation returns 0. */
     fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
         withDatabase { it.execute(sql, params) }
 
