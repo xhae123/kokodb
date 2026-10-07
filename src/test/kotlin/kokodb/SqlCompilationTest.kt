@@ -1,0 +1,56 @@
+package kokodb
+
+import org.jetbrains.kotlin.cli.common.ExitCode
+import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
+import org.junit.jupiter.api.io.TempDir
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.PrintStream
+import java.nio.file.Path
+import kotlin.io.path.writeText
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class SqlCompilationTest {
+    @TempDir
+    lateinit var directory: Path
+
+    private fun compile(name: String, code: String, expected: ExitCode) {
+        val source = directory.resolve("$name.kt")
+        source.writeText("import kokodb.*\n$code")
+        val classpath = listOf(KokoDb::class.java, Unit::class.java).joinToString(File.pathSeparator) {
+            File(it.protectionDomain.codeSource.location.toURI()).path
+        }
+        val output = ByteArrayOutputStream()
+        val result = PrintStream(output).use {
+            K2JVMCompiler().exec(
+                it, "-no-stdlib", "-no-reflect", "-jvm-target", "17", "-classpath", classpath,
+                "-d", directory.resolve(name).toString(), source.toString()
+            )
+        }
+        assertEquals(expected, result, output.toString())
+    }
+
+    @Test
+    fun `singleton typed SQL invocation compiles without database or repository construction`() {
+        val model = "@DbTable(\"models\") data class Model(val id: Int, val name: String)"
+        compile("SingletonSql", "$model\n" + """
+            fun usage(): List<Model> {
+                KokoDb.execute("INSERT INTO models VALUES (:id, :name)", mapOf("id" to 1, "name" to "Koko"))
+                return KokoDb<Model>("SELECT * FROM models WHERE id = :id", params = mapOf("id" to 1))
+            }
+        """.trimIndent(), ExitCode.OK)
+        compile("SingletonResult", "$model\nfun usage(): List<String> = KokoDb<Model>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
+        compile("SingletonNull", "$model\nfun usage() = KokoDb<Model?>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
+    }
+    @Test
+    fun `raw SQL consumers compile without model declarations`() {
+        compile("RawSql", """
+            fun usage(): Int {
+                KokoDb.execute("CREATE TABLE counts (value INT)")
+                KokoDb.execute("INSERT INTO counts VALUES (:value)", mapOf("value" to 3))
+                return KokoDb.query("SELECT * FROM counts").single().getInt("value")
+            }
+        """.trimIndent(), ExitCode.OK)
+    }
+}

@@ -2,7 +2,19 @@
 
 Everything you need for a small SQL database, in one simple Kotlin library.
 
-Build a lightweight embedded SQL database for Kotlin/JVM that provides storage, SQL execution, parameter binding, and result mapping through a direct Kotlin API, without a separate database server or JDBC.
+Build a lightweight embedded relational database for Kotlin/JVM whose primary query API is `KokoDb<Model>(sql, params)`, returning `List<Model>` from a shared database without JDBC or a separate server. SQL is the query language; generated Kotlin mapping makes typed results convenient. Raw SQL must remain usable without model declarations or code generation.
+
+Key-value storage and general-purpose object serialization are no longer the product direction. Distinguish implemented capabilities from planned APIs and document storage guarantees explicitly.
+
+# Naming and Model Conventions
+
+- Call a Kotlin type mapped to a relational table a model. Use domain names such as `User` and `Order`; do not require `Entity`, `Model`, or `Record` suffixes.
+- A model declares persisted data. Do not require a separate domain class with the same fields or expose generated table descriptors in ordinary model usage.
+- Call a stored table entry a row. Reserve `Table` and `Column` for relational schema concepts and their lower-level APIs.
+- Keep persistence operations separate from model instances. Do not require models to inherit a persistence base class.
+- Use `@DbTable` for generated table mapping and optional `@Id` for a caller-supplied single-column primary key. Keep models detached and writes explicit. Typed SQL currently requires complete mapped models; do not imply arbitrary DTO mapping, automatic dirty checking, generated keys, or transactions.
+- Use `KokoDb<Model>(sql, params)` in primary examples, `KokoDb.execute()` for SQL writes, and `KokoDb.query()` for raw rows. Do not require application database wrappers, services, or repositories.
+- KokoDb lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Do not describe multiple serialized calls as a transaction.
 
 # General Principles
 
@@ -30,6 +42,14 @@ Build a lightweight embedded SQL database for Kotlin/JVM that provides storage, 
 - Provide sufficient evidence for the claims: relevant test results, reproduction steps, before-and-after examples, or measurements. State any checks that were not run and any remaining limitations.
 - Use Mermaid sequence diagrams or other diagrams when they make interactions, execution flow, or architecture easier to understand. Keep diagrams focused and avoid adding them when text is clearer.
 - Scale the detail to the change. Keep small PRs concise while providing enough context and evidence for meaningful review.
+
+# Comment Rules
+
+- Prefer clear names and small functions over explanatory comments. Do not narrate obvious code or add comments to every declaration or step.
+- Add a comment only when it explains a non-obvious design reason, invariant, constraint, or edge case that the code alone does not convey.
+- Keep comments short and close to the relevant code. Describe why the behavior is necessary rather than restating what the code does.
+- Use concise KDoc for public API contracts, including important return values, errors, and limitations. Avoid boilerplate parameter lists and duplicating types or names.
+- Keep comments accurate when changing code. Remove stale, redundant, or speculative comments; use TODOs only for concrete follow-up work.
 
 # Commit Rules
 
