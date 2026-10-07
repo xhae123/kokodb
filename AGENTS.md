@@ -2,7 +2,7 @@
 
 Everything you need for a small SQL database, in one simple Kotlin library.
 
-Build a lightweight embedded relational database for Kotlin/JVM whose primary query API is `KokoDb<Model>(sql, params)`, returning `List<Model>` from a shared database without JDBC or a separate server. SQL is the query language; generated Kotlin mapping makes typed results convenient. Raw SQL must remain usable without model declarations or code generation.
+Build a lightweight embedded relational database for Kotlin/JVM whose primary query API is `KoKoDB<Model>(sql, params)`, returning `List<Model>` from a shared database without JDBC or a separate server. SQL is the query language; generated Kotlin mapping makes typed results convenient. Raw SQL must remain usable without model declarations or code generation.
 
 Key-value storage and general-purpose object serialization are no longer the product direction. Distinguish implemented capabilities from planned APIs and document storage guarantees explicitly.
 
@@ -13,8 +13,8 @@ Key-value storage and general-purpose object serialization are no longer the pro
 - Call a stored table entry a row. Reserve `Table` and `Column` for relational schema concepts and their lower-level APIs.
 - Keep persistence operations separate from model instances. Do not require models to inherit a persistence base class.
 - Use `@DbTable` for generated table mapping and optional `@Id` for a caller-supplied single-column primary key. Keep models detached and writes explicit. Typed SQL currently requires complete mapped models; do not imply arbitrary DTO mapping, automatic dirty checking, generated keys, or transactions.
-- Use `KokoDb<Model>(sql, params)` in primary examples, `KokoDb.execute()` for SQL writes, and `KokoDb.query()` for raw rows. Do not require application database wrappers, services, or repositories.
-- KokoDb lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Do not describe multiple serialized calls as a transaction.
+- Use `KoKoDB<Model>(sql, params)` in primary examples, `KoKoDB.execute()` for SQL writes, and `KoKoDB.query()` for raw rows. Do not require application database wrappers, services, or repositories.
+- KoKoDB lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Do not describe multiple serialized calls as a transaction.
 - Preserve statement atomicity: validate complete candidate state before publishing writes, including primary-key changes across multiple rows. Keep the proposed transaction and persistence contract in `docs/transactions-and-persistence.md` distinct from implemented guarantees.
 
 # General Principles

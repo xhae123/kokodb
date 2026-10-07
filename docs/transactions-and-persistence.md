@@ -4,7 +4,7 @@ Status: proposed design. This change implements memory-only SQL CRUD and stateme
 
 ## Goal and initial scope
 
-- Keep `KokoDb<Model>(sql, params)` as the primary SELECT API and `execute()` as the write API.
+- Keep `KoKoDB<Model>(sql, params)` as the primary SELECT API and `execute()` as the write API.
 - Support one database owner and serialized transactions, initially on local filesystems with verified file and directory synchronization semantics.
 - Keep the complete working catalog in memory. Use copy-on-write table snapshots rather than introducing pages, MVCC, or an optimizer in the first durable implementation.
 - Guarantee that an acknowledged persistent commit survives restart under the supported filesystem/device synchronization assumptions.
@@ -16,8 +16,8 @@ Status: proposed design. This change implements memory-only SQL CRUD and stateme
 Proposed API:
 
 ```kotlin
-KokoDb.open(path)
-KokoDb.transaction {
+KoKoDB.open(path)
+KoKoDB.transaction {
     execute("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Koko", "id" to 1))
     execute("DELETE FROM sessions WHERE user_id = :id", mapOf("id" to 1))
     val users = query<User>("SELECT * FROM users WHERE id = :id", mapOf("id" to 1))
@@ -30,7 +30,7 @@ KokoDb.transaction {
 - Commit publishes one catalog reference, covering all table changes together. Memory transactions publish after validation; persistent transactions publish only after the WAL force succeeds.
 - Returning normally commits. A thrown exception discards the overlay. Any SQL validation, execution, or result-mapping error marks the transaction rollback-only even if the callback catches it; normal callback completion then throws a transaction-aborted error instead of committing earlier writes.
 - Transaction scopes are synchronous and owned by one thread. Nested scopes and calls to open/close/checkpoint inside a transaction fail. Access from another thread through a captured transaction handle fails rather than escaping the scope.
-- Global KokoDb calls on the owner thread must route to the active transaction rather than silently autocommitting. Independent Database instances retain their own state and transaction boundaries.
+- Global KoKoDB calls on the owner thread must route to the active transaction rather than silently autocommitting. Independent Database instances retain their own state and transaction boundaries.
 - UPDATE affected counts include matched rows whose values stay equal. Empty/no-change transactions preserve those counts but need no WAL record or new commit sequence.
 - Callback side effects outside the database are outside the transaction. No automatic retry reruns a callback.
 
@@ -162,7 +162,7 @@ A complete valid frame can survive a crash before the writer forced or acknowled
 - Close rejects use inside an active transaction, waits for active operations, closes channels, releases locks, and invalidates the handle.
 - A checkpoint on close is optional for performance, not required for correctness. WAL commit is sufficient for restart recovery.
 - A recovery-required handle must not serve reads or writes from stale memory. Closing it must not rewrite a checkpoint from that stale state; reopening performs recovery.
-- Reopening never silently clears durable data. Existing KokoDb memory-mode close/openInMemory behavior remains explicitly different from persistent open(path).
+- Reopening never silently clears durable data. Existing KoKoDB memory-mode close/openInMemory behavior remains explicitly different from persistent open(path).
 
 ## Implementation and acceptance gates
 

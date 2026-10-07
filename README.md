@@ -1,8 +1,8 @@
-# KokoDB
+# KoKoDB
 
 Everything you need for a small SQL database, in one simple Kotlin library.
 
-KokoDB is an embedded relational database for Kotlin/JVM. Its primary query API is `KokoDb<Model>(sql, params)`: write SQL and receive Kotlin objects from a shared database, without JDBC, a separate server, or a required repository layer.
+KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API is `KoKoDB<Model>(sql, params)`: write SQL and receive Kotlin objects from a shared database, without JDBC, a separate server, or a required repository layer.
 
 The goal is a small, easy-to-adopt database with minimal dependencies and low resource overhead. Storage is currently memory-only; disk persistence is not implemented.
 
@@ -13,17 +13,17 @@ Declare the result model. KSP generates its table schema and mapper; the databas
 ```kotlin
 import kokodb.DbTable
 import kokodb.Id
-import kokodb.KokoDb
+import kokodb.KoKoDB
 
 @DbTable("users")
 data class User(@Id val id: Int, val name: String)
 
-KokoDb.execute(
+KoKoDB.execute(
     "INSERT INTO users VALUES (:id, :name)",
     params = mapOf("id" to 1, "name" to "Koko"),
 )
 
-val users: List<User> = KokoDb<User>(
+val users: List<User> = KoKoDB<User>(
     "SELECT id, name FROM users WHERE name = :name",
     params = mapOf("name" to "Koko"),
 )
@@ -31,14 +31,14 @@ val users: List<User> = KokoDb<User>(
 check(users == listOf(User(1, "Koko")))
 ```
 
-`KokoDb` is an object, and the call syntax invokes its query operator. Calls reuse the same database rather than constructing a new database. The type argument describes one result row; the returned value is always `List<Model>`.
+`KoKoDB` is an object, and the call syntax invokes its query operator. Calls reuse the same database rather than constructing a new database. The type argument describes one result row; the returned value is always `List<Model>`.
 
-No application database wrapper, service class, repository declaration, or manual mapper is required. Use the same `KokoDb` API from different application functions.
+No application database wrapper, service class, repository declaration, or manual mapper is required. Use the same `KoKoDB` API from different application functions.
 
 ## Query and model contracts
 
-- `KokoDb<Model>(sql, params)` accepts SELECT and returns freshly reconstructed, detached model objects. Empty results return an empty list.
-- Typed results currently require an `@DbTable` model and the KokoDB KSP processor. Ordinary unannotated DTOs, scalar result types, and arbitrary object mapping are not supported.
+- `KoKoDB<Model>(sql, params)` accepts SELECT and returns freshly reconstructed, detached model objects. Empty results return an empty list.
+- Typed results currently require an `@DbTable` model and the KoKoDB KSP processor. Ordinary unannotated DTOs, scalar result types, and arbitrary object mapping are not supported.
 - Models must be public top-level non-generic data classes with public constructors and public non-null Int/String constructor properties. Computed properties are not stored.
 - SELECT must use the model's table and include each stored property exactly once, or use `*`. Column order may differ from constructor order. Wrong tables, incomplete/duplicate projections, incompatible schemas, and invalid parameters fail even when no rows match.
 - Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
@@ -52,21 +52,21 @@ No application database wrapper, service class, repository declaration, or manua
 Raw SQL does not require a model declaration or KSP. Create schemas explicitly and receive detached Row values:
 
 ```kotlin
-KokoDb.execute("CREATE TABLE settings (name TEXT PRIMARY KEY, value INT)")
-KokoDb.execute(
+KoKoDB.execute("CREATE TABLE settings (name TEXT PRIMARY KEY, value INT)")
+KoKoDB.execute(
     "INSERT INTO settings VALUES (:name, :value)",
     mapOf("name" to "count", "value" to 3),
 )
-val count = KokoDb.query("SELECT value FROM settings WHERE name = :name", mapOf("name" to "count"))
+val count = KoKoDB.query("SELECT value FROM settings WHERE name = :name", mapOf("name" to "count"))
     .single().getInt("value")
 ```
 
 ```kotlin
-val updated = KokoDb.execute(
+val updated = KoKoDB.execute(
     "UPDATE settings SET value = :value WHERE name = :name",
     mapOf("value" to 4, "name" to "count"),
 )
-val deleted = KokoDb.execute("DELETE FROM settings WHERE name = :name", mapOf("name" to "count"))
+val deleted = KoKoDB.execute("DELETE FROM settings WHERE name = :name", mapOf("name" to "count"))
 check(updated == 1 && deleted == 1)
 ```
 
@@ -77,17 +77,17 @@ Each write statement validates its entire candidate state before publishing chan
 ## Shared database lifetime
 
 - The first query or execute call opens the shared memory database lazily. Its model definitions come from the calling thread's context class loader, falling back to the library class loader.
-- `KokoDb.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
-- `KokoDb.close()` discards the shared memory store. Calls then fail until `openInMemory()` explicitly opens a fresh store. Repeated closes are harmless, and previously returned results remain detached.
+- `KoKoDB.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
+- `KoKoDB.close()` discards the shared memory store. Calls then fail until `openInMemory()` explicitly opens a fresh store. Repeated closes are harmless, and previously returned results remain detached.
 - Each shared API call is serialized. Concurrent callers cannot execute against the shared engine simultaneously; a sequence of calls is not a transaction.
 - The singleton is shared within its loaded JVM class loader. It is not shared across processes or persisted across application restarts.
 
 ```kotlin
-KokoDb.close()
-KokoDb.openInMemory() // a fresh, empty store with generated model tables
+KoKoDB.close()
+KoKoDB.openInMemory() // a fresh, empty store with generated model tables
 ```
 
-For isolated databases or tests, use independent instances. These are intended for sequential use and do not share data with KokoDb:
+For isolated databases or tests, use independent instances. These are intended for sequential use and do not share data with KoKoDB:
 
 ```kotlin
 import kokodb.Database
@@ -125,12 +125,12 @@ Enable KSP in modules declaring annotated models. The processor runs at build ti
 ```mermaid
 sequenceDiagram
     participant App as Kotlin application
-    participant Shared as KokoDb singleton
+    participant Shared as KoKoDB singleton
     participant DB as Shared Database
     participant Parser as SQL parser
     participant Engine as Relational executor
     participant Adapter as Generated model mapper
-    App->>Shared: KokoDb<User>(sql, params)
+    App->>Shared: KoKoDB<User>(sql, params)
     Shared->>Shared: Serialize call and reuse database
     Shared->>DB: queryModels(User class, sql, params)
     DB->>Parser: Parse SELECT

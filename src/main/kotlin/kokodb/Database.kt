@@ -36,7 +36,7 @@ class Database private constructor(classLoader: ClassLoader) {
     private fun <M : Any> adapter(modelClass: Class<M>): ModelAdapter<M> {
         // The registry is keyed by the adapter's exact model class, preserving the erased generic type.
         return (models[modelClass] ?: throw DatabaseException(
-            "No generated adapter for '${modelClass.name}'; add @DbTable and configure the KokoDB KSP processor"
+            "No generated adapter for '${modelClass.name}'; add @DbTable and configure the KoKoDB KSP processor"
         )) as ModelAdapter<M>
     }
 

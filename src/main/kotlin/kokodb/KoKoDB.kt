@@ -1,7 +1,7 @@
 package kokodb
 
 /** A lazily opened, shared in-memory database. Each call is serialized; multiple calls are not a transaction. */
-object KokoDb {
+object KoKoDB {
     private val lock = Any()
     private var database: Database? = null
     private var closed = false
@@ -31,7 +31,7 @@ object KokoDb {
     fun openInMemory(
         classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
     ) = synchronized(lock) {
-        if (database != null) throw DatabaseException("KokoDb is already open; close it before opening a new database")
+        if (database != null) throw DatabaseException("KoKoDB is already open; close it before opening a new database")
         database = Database.inMemory(classLoader)
         closed = false
     }
@@ -43,7 +43,7 @@ object KokoDb {
     }
 
     private fun <R> withDatabase(operation: (Database) -> R): R = synchronized(lock) {
-        if (closed) throw DatabaseException("KokoDb is closed; call openInMemory() before using it again")
+        if (closed) throw DatabaseException("KoKoDB is closed; call openInMemory() before using it again")
         val current = database ?: Database.inMemory().also { database = it }
         operation(current)
     }

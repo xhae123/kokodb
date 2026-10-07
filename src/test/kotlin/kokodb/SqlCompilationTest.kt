@@ -18,7 +18,7 @@ class SqlCompilationTest {
     private fun compile(name: String, code: String, expected: ExitCode) {
         val source = directory.resolve("$name.kt")
         source.writeText("import kokodb.*\n$code")
-        val classpath = listOf(KokoDb::class.java, Unit::class.java).joinToString(File.pathSeparator) {
+        val classpath = listOf(KoKoDB::class.java, Unit::class.java).joinToString(File.pathSeparator) {
             File(it.protectionDomain.codeSource.location.toURI()).path
         }
         val output = ByteArrayOutputStream()
@@ -36,20 +36,20 @@ class SqlCompilationTest {
         val model = "@DbTable(\"models\") data class Model(val id: Int, val name: String)"
         compile("SingletonSql", "$model\n" + """
             fun usage(): List<Model> {
-                KokoDb.execute("INSERT INTO models VALUES (:id, :name)", mapOf("id" to 1, "name" to "Koko"))
-                return KokoDb<Model>("SELECT * FROM models WHERE id = :id", params = mapOf("id" to 1))
+                KoKoDB.execute("INSERT INTO models VALUES (:id, :name)", mapOf("id" to 1, "name" to "Koko"))
+                return KoKoDB<Model>("SELECT * FROM models WHERE id = :id", params = mapOf("id" to 1))
             }
         """.trimIndent(), ExitCode.OK)
-        compile("SingletonResult", "$model\nfun usage(): List<String> = KokoDb<Model>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
-        compile("SingletonNull", "$model\nfun usage() = KokoDb<Model?>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
+        compile("SingletonResult", "$model\nfun usage(): List<String> = KoKoDB<Model>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
+        compile("SingletonNull", "$model\nfun usage() = KoKoDB<Model?>(\"SELECT * FROM models\")", ExitCode.COMPILATION_ERROR)
     }
     @Test
     fun `raw SQL consumers compile without model declarations`() {
         compile("RawSql", """
             fun usage(): Int {
-                KokoDb.execute("CREATE TABLE counts (value INT)")
-                KokoDb.execute("INSERT INTO counts VALUES (:value)", mapOf("value" to 3))
-                return KokoDb.query("SELECT * FROM counts").single().getInt("value")
+                KoKoDB.execute("CREATE TABLE counts (value INT)")
+                KoKoDB.execute("INSERT INTO counts VALUES (:value)", mapOf("value" to 3))
+                return KoKoDB.query("SELECT * FROM counts").single().getInt("value")
             }
         """.trimIndent(), ExitCode.OK)
     }
