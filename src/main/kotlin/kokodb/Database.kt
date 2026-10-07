@@ -2,13 +2,14 @@ package kokodb
 
 import kokodb.execution.Executor
 import kokodb.mapping.ModelAdapter
+import kokodb.mapping.ModelColumn
 import kokodb.mapping.ModelProvider
-import kokodb.query.Equality
-import kokodb.query.Expression
+import kokodb.query.Projection
 import kokodb.query.Statement
 import kokodb.sql.Parser
 import kokodb.storage.Catalog
-import kokodb.storage.MemoryKeyValueStore
+import kokodb.storage.Column
+import kokodb.storage.DataType
 import java.util.ServiceLoader
 
 /**
@@ -16,23 +17,8 @@ import java.util.ServiceLoader
  * Named parameters accept Int or String values; invalid SQL or execution throws [DatabaseException].
  */
 class Database private constructor(classLoader: ClassLoader) {
-    private val keyValues = MemoryKeyValueStore()
     private val executor = Executor(Catalog())
     private val models = mutableMapOf<Class<*>, ModelAdapter<*>>()
-
-    /** Reads a value by its exact key. Missing keys and stored null values both return null. */
-    operator fun get(key: String): Any? = keyValues.get(key)
-
-    /** Stores a scalar, ByteArray, or null, replacing the previous value. Unsupported values fail before mutation. */
-    operator fun set(key: String, value: Any?) {
-        keyValues.set(key, value)
-    }
-
-    /** Distinguishes a stored null from a missing key through `key in database`. */
-    operator fun contains(key: String): Boolean = keyValues.contains(key)
-
-    /** Removes a key and returns its previous value, or null if missing or previously null. */
-    fun remove(key: String): Any? = keyValues.remove(key)
 
     init {
         val providers = ServiceLoader.load(ModelProvider::class.java, classLoader)
@@ -41,23 +27,13 @@ class Database private constructor(classLoader: ClassLoader) {
                 if (models.putIfAbsent(adapter.modelClass, adapter) != null) {
                     throw DatabaseException("Duplicate generated adapter for '${adapter.modelClass.name}'")
                 }
-                createTable(adapter.table)
+                executor.execute(Statement.CreateTable(adapter.tableName, schema(adapter)), emptyMap())
             }
         }
     }
 
-    /** Inserts a generated model. Missing adapters report the required annotation and processor setup. */
-    fun <M : Any> insert(model: M): Int = adapter(model.javaClass).insert(this, model)
-
-    inline fun <reified M : Any> from(): ModelQuery<M> = from(M::class.java)
-
-    fun <M : Any> from(modelClass: Class<M>): ModelQuery<M> {
-        val adapter = adapter(modelClass)
-        return ModelQuery(from(adapter.table), adapter)
-    }
-
     @Suppress("UNCHECKED_CAST")
-    internal fun <M : Any> adapter(modelClass: Class<M>): ModelAdapter<M> {
+    private fun <M : Any> adapter(modelClass: Class<M>): ModelAdapter<M> {
         // The registry is keyed by the adapter's exact model class, preserving the erased generic type.
         return (models[modelClass] ?: throw DatabaseException(
             "No generated adapter for '${modelClass.name}'; add @DbTable and configure the KokoDB KSP processor"
@@ -72,40 +48,33 @@ class Database private constructor(classLoader: ClassLoader) {
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
         executor.query(Parser(sql).parse(), params)
 
-    /** Creates a table from its Kotlin schema. An existing table is an error. */
-    fun createTable(table: Table) {
-        executor.execute(Statement.CreateTable(table.tableName, table.schema()), emptyMap())
+    /** Maps SELECT results to a generated model. Its source table and complete projection must match the model. */
+    fun <M : Any> queryModels(
+        modelClass: Class<M>,
+        sql: String,
+        params: Map<String, Any?> = emptyMap(),
+    ): List<M> {
+        val statement = Parser(sql).parse() as? Statement.Select
+            ?: throw DatabaseException("Use execute() for CREATE TABLE or INSERT")
+        val adapter = adapter(modelClass)
+        if (statement.table != adapter.tableName) {
+            throw DatabaseException("SELECT source table does not match model '${modelClass.name}'")
+        }
+        val schema = schema(adapter)
+        val names = (statement.projection as? Projection.Columns)?.names
+        if (names != null && (names.size != schema.size || names.toSet() != schema.map { it.name }.toSet())) {
+            throw DatabaseException("SELECT must include every stored model column exactly once")
+        }
+        // Validate the mapping before scanning, so incompatible projections also fail on empty results.
+        return executor.queryMapped(statement.copy(expectedSchema = schema), params, adapter::read)
     }
 
-    /** Inserts one row after all assignments and the stored schema have been validated. Returns 1. */
-    fun insertInto(table: Table, assign: InsertBuilder.() -> Unit): Int {
-        val schema = table.schema()
-        val builder = InsertBuilder(table).apply(assign)
-        return executor.execute(Statement.Insert(table.tableName, builder.expressions(), schema), emptyMap())
-    }
-
-    /** Replaces every matching row with a complete row. Validation and key conflicts fail before mutation. */
-    fun replaceIn(table: Table, condition: Condition, assign: InsertBuilder.() -> Unit): Int {
-        val filter = equality(table, condition)
-        val schema = table.schema()
-        val values = InsertBuilder(table).apply(assign).expressions()
-        return executor.execute(Statement.Replace(table.tableName, values, filter, schema), emptyMap())
-    }
-
-    /** Deletes matching rows and returns their count. A condition is required. */
-    fun deleteFrom(table: Table, condition: Condition): Int = executor.execute(
-        Statement.Delete(table.tableName, equality(table, condition), table.schema()), emptyMap()
-    )
-
-    private fun equality(table: Table, condition: Condition): Equality {
-        if (condition.column.table !== table) throw DatabaseException("Condition belongs to another table")
-        return Equality(condition.column.name, Expression.Literal(condition.value))
-    }
-
-    /** Starts a lazy query selecting all columns. Validation of stored schema occurs on execution. */
-    fun from(table: Table): Query {
-        table.columns()
-        return Query(executor, table)
+    private fun schema(adapter: ModelAdapter<*>): List<Column> = adapter.columns.map {
+        val type = when (it.type) {
+            ModelColumn.Type.INT -> DataType.INT
+            ModelColumn.Type.TEXT -> DataType.TEXT
+        }
+        Column(it.name, type, it.primaryKey)
     }
 
     companion object {

@@ -8,24 +8,12 @@ internal sealed interface Statement {
     data class Insert(
         val table: String,
         val values: List<Expression>,
-        val expectedSchema: List<Column>? = null,
     ) : Statement
     data class Select(
         val table: String,
         val projection: Projection,
         val condition: Equality?,
         val expectedSchema: List<Column>? = null,
-    ) : Statement
-    data class Replace(
-        val table: String,
-        val values: List<Expression>,
-        val condition: Equality,
-        val expectedSchema: List<Column>,
-    ) : Statement
-    data class Delete(
-        val table: String,
-        val condition: Equality,
-        val expectedSchema: List<Column>,
     ) : Statement
 }
 

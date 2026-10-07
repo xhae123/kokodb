@@ -19,31 +19,10 @@ internal class Executor(private val catalog: Catalog) {
         }
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
-            validateSchema(table, statement.expectedSchema)
             val values = resolveRow(table, statement.values, params)
             validateKeys(table, table.rows.asSequence() + sequenceOf(values))
             table.rows.add(values)
             1
-        }
-        is Statement.Replace -> {
-            val table = catalog.table(statement.table)
-            validateSchema(table, statement.expectedSchema)
-            val values = resolveRow(table, statement.values, params)
-            val filter = resolveFilter(table, statement.condition, params)
-            val indices = table.rows.indices.filter { table.rows[it][filter.first] == filter.second }
-            val affected = indices.toSet()
-            // Validate the complete resulting table before changing any row, including multi-row collisions.
-            validateKeys(table, table.rows.asSequence().mapIndexed { index, row -> if (index in affected) values else row })
-            indices.forEach { table.rows[it] = values }
-            indices.size
-        }
-        is Statement.Delete -> {
-            val table = catalog.table(statement.table)
-            validateSchema(table, statement.expectedSchema)
-            val filter = resolveFilter(table, statement.condition, params)
-            val before = table.rows.size
-            table.rows.removeAll { it[filter.first] == filter.second }
-            before - table.rows.size
         }
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
     }
@@ -67,7 +46,7 @@ internal class Executor(private val catalog: Catalog) {
         val filter = statement.condition?.let { resolveFilter(table, it, params) }
         return table.rows.asSequence()
             .filter { row -> filter == null || row[filter.first] == filter.second }
-            .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] }, statement.table)) }
+            .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] })) }
             .toList()
     }
 
