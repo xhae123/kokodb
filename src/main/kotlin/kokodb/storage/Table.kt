@@ -10,4 +10,6 @@ internal class Table(val columns: List<Column>) {
     fun publishRows(rows: List<List<Value>>) {
         this.rows = rows
     }
+
+    fun fork(): Table = Table(columns).also { it.publishRows(rows) }
 }

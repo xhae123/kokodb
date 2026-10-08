@@ -24,10 +24,13 @@ fun main() {
         check(users == listOf(User(1, "Koko")))
         println(users)
         check(KoKoDB<User>("SELECT * FROM users WHERE id = 2").isEmpty())
-        check(KoKoDB.execute(
-            "UPDATE users SET name = :name WHERE id = :id",
-            mapOf("name" to "Updated", "id" to 1),
-        ) == 1)
+        KoKoDB.transaction {
+            check(execute(
+                "UPDATE users SET name = :name WHERE id = :id",
+                mapOf("name" to "Updated", "id" to 1),
+            ) == 1)
+            check(query<User>("SELECT * FROM users") == listOf(User(1, "Updated")))
+        }
         check(named("Updated") == listOf(User(1, "Updated")))
         check(KoKoDB.execute("DELETE FROM users WHERE id = :id", mapOf("id" to 1)) == 1)
         check(KoKoDB<User>("SELECT * FROM users").isEmpty())

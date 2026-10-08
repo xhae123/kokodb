@@ -1,6 +1,6 @@
 # Transactions and Persistence Design
 
-Status: proposed design. This change implements memory-only SQL CRUD and statement atomicity. Transaction blocks, file storage, WAL, checkpoints, and recovery described below are not implemented yet.
+Status: memory SQL CRUD and synchronous transaction blocks are implemented. File storage, WAL, checkpoints, and recovery below remain a proposed design.
 
 ## Goal and initial scope
 
@@ -13,10 +13,10 @@ Status: proposed design. This change implements memory-only SQL CRUD and stateme
 
 ## Transaction contract
 
-Proposed API:
+Implemented memory API:
 
 ```kotlin
-KoKoDB.open(path)
+KoKoDB.openInMemory()
 KoKoDB.transaction {
     execute("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Koko", "id" to 1))
     execute("DELETE FROM sessions WHERE user_id = :id", mapOf("id" to 1))
@@ -25,20 +25,22 @@ KoKoDB.transaction {
 ```
 
 - A write outside an explicit transaction is one autocommit transaction. INSERT, UPDATE, DELETE, and CREATE TABLE have the same commit machinery.
-- Beginning a transaction captures the committed catalog. Writes build a private overlay containing replacement states for dirty tables; unchanged tables/immutable rows may be shared.
+- Beginning a transaction forks the committed catalog into private table wrappers, sharing immutable row lists. Writes replace lists in that private catalog; commit publishes its DatabaseState reference.
 - Reads inside the scope see the overlay, including that transaction's own writes. Other callers wait for the transaction's database lock and see the committed catalog after it finishes.
 - Commit publishes one catalog reference, covering all table changes together. Memory transactions publish after validation; persistent transactions publish only after the WAL force succeeds.
 - Returning normally commits. A thrown exception discards the overlay. Any SQL validation, execution, or result-mapping error marks the transaction rollback-only even if the callback catches it; normal callback completion then throws a transaction-aborted error instead of committing earlier writes.
 - Transaction scopes are synchronous and owned by one thread. Nested scopes and calls to open/close/checkpoint inside a transaction fail. Access from another thread through a captured transaction handle fails rather than escaping the scope.
 - Global KoKoDB calls on the owner thread must route to the active transaction rather than silently autocommitting. Independent Database instances retain their own state and transaction boundaries.
-- UPDATE affected counts include matched rows whose values stay equal. Empty/no-change transactions preserve those counts but need no WAL record or new commit sequence.
+- UPDATE affected counts include matched rows whose values stay equal. Planned persistent transactions with no net catalog changes need no WAL record or new commit sequence.
 - Callback side effects outside the database are outside the transaction. No automatic retry reruns a callback.
 
 ## Mutation boundary
 
 - The current CRUD executor resolves every assignment and predicate, checks types and duplicate assignments, and validates the complete candidate primary-key set before publishing a table's row snapshot.
-- The transaction implementation will move that same publication into the private catalog overlay. A successful statement is not a durable commit while an explicit transaction remains open.
+- The memory transaction implementation directs that same publication into its private catalog. A successful statement is not a durable commit while an explicit transaction remains open.
 - Existing SELECT results remain detached across updates, rollbacks, close, and reopen.
+
+Persistent `KoKoDB.open(path)` is still proposed; the following storage protocols are not implemented yet.
 
 ## Storage choice
 

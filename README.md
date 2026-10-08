@@ -81,7 +81,7 @@ Each write statement validates its entire candidate state before publishing chan
 - The first query or execute call opens the shared memory database lazily. Its model definitions come from the calling thread's context class loader, falling back to the library class loader.
 - `KoKoDB.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
 - `KoKoDB.close()` discards the shared memory store. Calls then fail until `openInMemory()` explicitly opens a fresh store. Repeated closes are harmless, and previously returned results remain detached.
-- Each shared API call is serialized. Concurrent callers cannot execute against the shared engine simultaneously; a sequence of calls is not a transaction.
+- Each shared API call and explicit transaction callback is serialized. Concurrent callers wait for the active operation; separate calls outside a transaction do not commit together.
 - The singleton is shared within its loaded JVM class loader. It is not shared across processes or persisted across application restarts.
 
 ```kotlin
@@ -97,6 +97,25 @@ import kokodb.Database
 val db = Database.inMemory()
 val users = db.queryModels(User::class.java, "SELECT * FROM users")
 ```
+
+## Memory transactions
+
+```kotlin
+KoKoDB.transaction {
+    execute("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Updated", "id" to 1))
+    execute("INSERT INTO users VALUES (2, 'Another')")
+    val pending: List<User> = query<User>("SELECT * FROM users")
+    check(pending.size == 2)
+}
+```
+
+- The callback reads its own writes. Returning normally publishes all its changes together, including newly created tables. A thrown exception discards them all.
+- A SQL or mapping error makes the scope rollback-only even if caught inside the callback. Further operations and commit fail; earlier writes are discarded.
+- Global KoKoDB calls on the owner thread join the scope. Other shared callers wait until the entire callback finishes.
+- Use `query<Model>()` for typed results and `queryRows()` for raw rows inside the scope. Independent databases support `db.transaction { ... }` too.
+- Scopes are synchronous and owned by one thread. Captured handles reject another thread or reuse after completion. Nested scopes and shared close/open inside a scope fail and abort it if caught.
+- Transaction callbacks are never automatically retried. External side effects are not rolled back; do not wait for another thread to call KoKoDB while holding its transaction lock.
+- Memory commit is not durable storage. A process exit or close still discards all memory data.
 
 ## Build setup
 
@@ -160,8 +179,8 @@ The parser builds a shared query representation. The executor validates schemas,
 - One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
 - DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
 
-Disk persistence, transactions, indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
+Disk persistence, indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
 
-The [transaction and persistence design](docs/transactions-and-persistence.md) specifies future transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. These APIs and storage mechanisms are planned, not implemented.
+The [transaction and persistence design](docs/transactions-and-persistence.md) specifies future transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions are implemented; persistent APIs and storage mechanisms remain planned.
 
 Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.

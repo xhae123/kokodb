@@ -17,7 +17,8 @@ import java.util.ServiceLoader
  * Named parameters accept Int or String values; invalid SQL or execution throws [DatabaseException].
  */
 class Database private constructor(classLoader: ClassLoader) {
-    private val executor = Executor(Catalog())
+    private var state = DatabaseState(Catalog())
+    @Volatile private var activeTransaction: Transaction? = null
     private val models = mutableMapOf<Class<*>, ModelAdapter<*>>()
 
     init {
@@ -27,7 +28,7 @@ class Database private constructor(classLoader: ClassLoader) {
                 if (models.putIfAbsent(adapter.modelClass, adapter) != null) {
                     throw DatabaseException("Duplicate generated adapter for '${adapter.modelClass.name}'")
                 }
-                executor.execute(Statement.CreateTable(adapter.tableName, schema(adapter)), emptyMap())
+                state.executor.execute(Statement.CreateTable(adapter.tableName, schema(adapter)), emptyMap())
             }
         }
     }
@@ -42,18 +43,18 @@ class Database private constructor(classLoader: ClassLoader) {
 
     /** Executes one write statement. Returns 0 for CREATE TABLE and matched row counts for INSERT/UPDATE/DELETE. */
     fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
-        executor.execute(Parser(sql).parse(), params)
+        withExecutor { it.execute(Parser(sql).parse(), params) }
 
     /** Executes one SELECT and returns detached rows with no guaranteed order. */
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
-        executor.query(Parser(sql).parse(), params)
+        withExecutor { it.query(Parser(sql).parse(), params) }
 
     /** Maps SELECT results to a generated model. Its source table and complete projection must match the model. */
     fun <M : Any> queryModels(
         modelClass: Class<M>,
         sql: String,
         params: Map<String, Any?> = emptyMap(),
-    ): List<M> {
+    ): List<M> = withExecutor { executor ->
         val statement = Parser(sql).parse() as? Statement.Select
             ?: throw DatabaseException("Use execute() for statements other than SELECT")
         val adapter = adapter(modelClass)
@@ -66,7 +67,32 @@ class Database private constructor(classLoader: ClassLoader) {
             throw DatabaseException("SELECT must include every stored model column exactly once")
         }
         // Validate the mapping before scanning, so incompatible projections also fail on empty results.
-        return executor.queryMapped(statement.copy(expectedSchema = schema), params, adapter::read)
+        executor.queryMapped(statement.copy(expectedSchema = schema), params, adapter::read)
+    }
+
+    /** Commits all callback writes together, or discards them on failure. Caught database errors still abort commit. */
+    fun <R> transaction(block: Transaction.() -> R): R {
+        requireNoTransaction("begin a nested transaction")
+        val transaction = Transaction(this, DatabaseState(state.catalog.fork()))
+        activeTransaction = transaction
+        return try {
+            val result = transaction.block()
+            transaction.requireCommittable()
+            state = transaction.state
+            result
+        } finally {
+            transaction.active = false
+            activeTransaction = null
+        }
+    }
+
+    internal fun requireNoTransaction(operation: String) {
+        activeTransaction?.run { throw DatabaseException("Cannot $operation inside a transaction") }
+    }
+
+    private fun <R> withExecutor(operation: (Executor) -> R): R {
+        val transaction = activeTransaction ?: return operation(state.executor)
+        return transaction.run { operation(transaction.state.executor) }
     }
 
     private fun schema(adapter: ModelAdapter<*>): List<Column> = adapter.columns.map {
