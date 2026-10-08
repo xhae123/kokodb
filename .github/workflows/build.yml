@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build :sample:run :benchmarks:run --args=smoke
+      - run: ./gradlew build :sample:run :benchmarks:run --args=smoke :benchmarks:storageSmoke
       - name: Recover sample data in a second JVM
         run: |
           python3 - <<'PY'

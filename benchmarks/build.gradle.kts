@@ -17,3 +17,13 @@ dependencies {
 application {
     mainClass = "benchmark.Benchmark"
 }
+
+tasks.register<JavaExec>("storageSmoke") {
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("benchmark.DurabilityBenchmark")
+    val directory = layout.buildDirectory.dir("storage-smoke")
+    doFirst {
+        directory.get().asFile.mkdirs()
+        args(directory.get().asFile.resolve("run-${System.nanoTime()}").apply { mkdirs() }.absolutePath, "smoke")
+    }
+}

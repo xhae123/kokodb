@@ -39,4 +39,21 @@ The CSV summaries are medians/minima/maxima of batch averages, not individual-re
 - There is no transaction or disk-durability cost in the initial baseline. Comparing these figures with durable writes in another engine would be misleading.
 - No conclusion about being smaller/faster than another database is justified until an equivalent engine comparison is measured.
 
-Future evidence must cover explicit transactions, file/WAL write volume, restart recovery, and subprocess crash points as those features land. Keep correctness gates separate from environment-dependent performance observations.
+## Durable storage measurements
+
+Build the distribution and run the separate storage harness:
+
+```sh
+./gradlew :benchmarks:installDist :benchmarks:storageSmoke
+python3 benchmarks/measure_storage.py --java "$JAVA_HOME/bin/java" --output benchmarks/results/storage
+```
+
+The default is three independent JVM forks. Each fork measures 100 and 1,000 single-row INSERTs in two modes: one durable transaction per INSERT, or all INSERTs in one durable transaction. Each mode/size receives one warmup batch and three measured batches. This is a comparison of transaction boundaries within KoKoDB, with different group atomicity, rather than an equivalent-workload comparison between engines.
+
+Each batch starts with an empty table in a checkpointed database. Insert time/allocation includes parsing, parameters, row snapshots, WAL serialization and commit synchronization; schema creation and the initial checkpoint are outside that interval. WAL bytes exclude the initial 40-byte header. The harness independently checks commit counts, framing, sequence continuity and CRC32C checksums in the resulting WAL.
+
+The harness closes and reopens the database to time WAL replay, verifies every recovered row, times an explicit checkpoint, and closes/reopens again to time snapshot restoration. Both reopen intervals are in the already-running benchmark JVM and exclude OS-process launch. Verification is outside the reopen and checkpoint timing intervals. After checkpoint, the WAL must contain only its 40-byte header and every row must survive a further reopen.
+
+Raw observations, medians/minima/maxima, fork logs, environment details and artifact/source hashes are retained. Files are created on the filesystem backing the operating system's temporary directory, reported in each fork log, and removed after that fork. Peak RSS includes the JVM and benchmark's WAL-reading buffers; it is not retained database heap.
+
+The fixed workload order and warmed filesystem/JVM affect timings. Storage synchronization depends on the OS/filesystem/device contract, and these measurements do not simulate hardware power loss. `storageSmoke` runs the same content/commit/checkpoint assertions at 10 rows in CI without timing thresholds. Fault injection and child-JVM termination remain separate correctness tests.
