@@ -181,6 +181,8 @@ dependencies {
 
 Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library.
 
+The [Kotlin model comparison](docs/baselines/2026-10-08-kotlin-model-query/README.md) measures generated KoKoDB results against H2 2.5.252 prepared queries with direct constructor mapping. In the warmed 1,000-row full-model fixture, KoKoDB measured 7.21 us/query versus H2's 19.15 us, with comparable allocation. This is a scoped result, not a general engine-performance claim.
+
 ## Architecture
 
 Reproduce the current resource baseline with the [benchmark guide](benchmarks/README.md). Benchmarks are a separate development module and add no runtime-library dependency.
@@ -206,7 +208,9 @@ sequenceDiagram
     Shared-->>App: List<User>
 ```
 
-The parser builds a shared query representation. The executor validates schemas, resolves parameters, and scans or replaces row snapshots in the in-memory catalog. Generated model mapping uses constructor calls rather than runtime constructor introspection. Mapping runs during the scan without building an intermediate List<Row>.
+The parser builds a shared query representation. The executor validates schemas, resolves parameters, and scans or replaces row snapshots in the in-memory catalog. Generated model mapping reads values in the validated schema's column order and calls Kotlin constructors directly, without building per-result column maps or Row objects. Models remain detached; raw queries still return detached Row values.
+
+Generated-code SPI adapters expose `readValues(ModelValues)` for direct mapping. The view is valid only during the mapping call and must not be retained. Existing `read(Row)` adapters use a default bridge that preserves their detached Row behavior; regenerate adapters with the updated processor to use the direct path.
 
 ## Supported SQL and limitations
 

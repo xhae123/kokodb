@@ -1,0 +1,78 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "architecture": "arm64",
+  "java": "openjdk version \"17.0.16\" 2025-07-15\nOpenJDK Runtime Environment Homebrew (build 17.0.16+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.16+0, mixed mode, sharing)\n",
+  "command": [
+    "/opt/homebrew/opt/openjdk@17/bin/java",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+    "org.openjdk.jmh.Main",
+    "comparison.ModelQueryBenchmark",
+    "-prof",
+    "gc",
+    "-rf",
+    "json",
+    "-rff",
+    "/Users/xhae000/Desktop/kokodb/comparison/results/after/jmh.json",
+    "-foe",
+    "true"
+  ],
+  "quick": false,
+  "runtime_commit": "b9e364d8e9fb9ba9a05d1137d5383d21f4c8644a",
+  "sources": {
+    "comparison/src/main/java/comparison/ModelFixture.java": "2a2bc875094598c37555dd88a76f868598f7a1d31668f6a7ee7afda22d56ba1a",
+    "comparison/src/main/java/comparison/ModelQueryBenchmark.java": "b4d27fcbbfb06ed03159534b7e4f8e3b59bf0bbfd1597cd5485df420f3f56bae",
+    "comparison/src/main/java/comparison/Smoke.java": "4aa9303052105c4fd12d8c437220b1159f2309df36c918ba23a7fdd30bee4189",
+    "comparison/src/main/kotlin/comparison/BenchmarkUser.kt": "f9a072ba8aff4bc020257b515344d38ffe654bf1c577acda5caea0dbe9d298c3"
+  },
+  "jars": [
+    {
+      "name": "annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+      "native_files": []
+    },
+    {
+      "name": "commons-math3-3.6.1.jar",
+      "bytes": 2213560,
+      "sha256": "1e56d7b058d28b65abd256b8458e3885b674c1d588fa43cd7d1cbb9c7ef2b308",
+      "native_files": []
+    },
+    {
+      "name": "comparison.jar",
+      "bytes": 20547,
+      "sha256": "ee71cd71ceb072b7638193dc68e5f89dca1987c03bde3c5562555fde9fcd3882",
+      "native_files": []
+    },
+    {
+      "name": "h2-2.5.252.jar",
+      "bytes": 2693360,
+      "sha256": "90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20",
+      "native_files": []
+    },
+    {
+      "name": "jmh-core-1.37.jar",
+      "bytes": 552986,
+      "sha256": "dc0eaf2bbf0036a70b60798c785d6e03a9daf06b68b8edb0f1ba9eb3421baeb3",
+      "native_files": []
+    },
+    {
+      "name": "jopt-simple-5.0.4.jar",
+      "bytes": 78146,
+      "sha256": "df26cc58f235f477db07f753ba5a3ab243ebe5789d9f89ecf68dd62ea9a66c28",
+      "native_files": []
+    },
+    {
+      "name": "kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 121952,
+      "sha256": "71ad599a34e083733da939a854222a8e33d3afd68c0de74484c36f5d29cb59c5",
+      "native_files": []
+    },
+    {
+      "name": "kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e",
+      "native_files": []
+    }
+  ]
+}

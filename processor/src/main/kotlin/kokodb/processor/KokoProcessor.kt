@@ -128,6 +128,12 @@ private class KokoProcessor(private val generator: CodeGenerator, private val lo
             appendLine("        `${field.name}` = row.$getter(\"${field.name}\"),")
         }
         appendLine("    )")
+        appendLine("    override fun readValues(values: kokodb.mapping.ModelValues): $modelType = $modelType(")
+        fields.forEachIndexed { index, field ->
+            val getter = if (field.type == "Int") "getInt" else "getString"
+            appendLine("        `${field.name}` = values.$getter($index),")
+        }
+        appendLine("    )")
         appendLine("}")
     }
 

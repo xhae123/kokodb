@@ -79,7 +79,7 @@ class Database private constructor(classLoader: ClassLoader, private val store: 
             throw DatabaseException("SELECT must include every stored model column exactly once")
         }
         // Validate the mapping before scanning, so incompatible projections also fail on empty results.
-        executor.queryMapped(statement.copy(expectedSchema = schema), params, adapter::read)
+        executor.queryModels(statement.copy(expectedSchema = schema), params, adapter)
     }
 
     /** Commits all callback writes together, or discards them on failure. Caught database errors still abort commit. */
