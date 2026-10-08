@@ -24,9 +24,9 @@ KoKoDB.transaction {
 }
 ```
 
-- A write outside an explicit transaction is one autocommit transaction. INSERT, UPDATE, DELETE, and CREATE TABLE have the same commit machinery.
+- A write outside an explicit transaction is one atomic statement. In file mode, INSERT, UPDATE, DELETE, and CREATE TABLE use the same autocommit machinery; memory mode needs no WAL.
 - Beginning a transaction forks the committed catalog into private table wrappers, sharing immutable row lists. Writes replace lists in that private catalog; commit publishes its DatabaseState reference.
-- Reads inside the scope see the overlay, including that transaction's own writes. Other callers wait for the transaction's database lock and see the committed catalog after it finishes.
+- Reads inside the scope see the overlay, including that transaction's own writes. Other KoKoDB callers wait for its facade lock and see the committed catalog after it finishes. Independent Database instances require sequential use by their caller.
 - Commit publishes one catalog reference, covering all table changes together. Memory transactions publish after validation; persistent transactions publish only after the WAL force succeeds.
 - Returning normally commits. A thrown exception discards the overlay. Any SQL validation, execution, or result-mapping error marks the transaction rollback-only even if the callback catches it; normal callback completion then throws a transaction-aborted error instead of committing earlier writes.
 - Transaction scopes are synchronous and owned by one thread. Nested scopes and calls to open/close/checkpoint inside a transaction fail. Access from another thread through a captured transaction handle fails rather than escaping the scope.
@@ -36,7 +36,7 @@ KoKoDB.transaction {
 
 ## Mutation boundary
 
-- The current CRUD executor resolves every assignment and predicate, checks types and duplicate assignments, and validates the complete candidate primary-key set before publishing a table's row snapshot.
+- The CRUD executor resolves every assignment and predicate and checks types and duplicate assignments before publishing a table's row snapshot. INSERT checks the new key against existing rows; UPDATE validates the complete candidate key set when a primary-key column is assigned. Updates to other columns preserve the existing uniqueness invariant without rebuilding that set.
 - The memory transaction implementation directs that same publication into its private catalog. A successful statement is not a durable commit while an explicit transaction remains open.
 - Existing SELECT results remain detached across updates, rollbacks, close, and reopen.
 
@@ -98,12 +98,12 @@ Payload:
 - The checksummed WAL header contains eight-byte magic `KOKOWAL1`, two unsigned 16-bit major/minor values, the 16-byte database UUID, an unsigned 64-bit base commit sequence, and unsigned 32-bit CRC32C over those preceding fields.
 - Each frame contains: four-byte magic `KTX1`, unsigned 32-bit total frame length, unsigned 64-bit commit sequence, unsigned 32-bit payload length, a payload using the snapshot table-count/table encoding for dirty table after-images, CRC32C over the frame prefix/payload, four-byte trailer `CMIT`, and repeated total frame length.
 - Frame sequences must increase exactly by one from the WAL base. No SQL strings, caller parameters, model names, or generated adapter names are logged.
-- The initial hard bounds are 64 MiB per WAL frame and 256 MiB per snapshot, with bounded field/table/row counts derived from the remaining bytes. Reject overflows, unsupported versions/tags, impossible lengths, invalid UTF-8, and trailing bytes before allocation/publication.
+- The initial hard bounds are 64 MiB per WAL frame and 256 MiB per snapshot, with bounded field/table/row counts derived from the remaining bytes. Check bounds before allocation, and reject unsupported versions/tags, invalid UTF-8, semantic errors and trailing bytes before publication.
 - CRC32C detects accidental corruption; it is not authentication. Unsupported future major/minor formats are rejected rather than guessed or overwritten.
 
 ## Persistent commit protocol
 
-1. Hold the database transaction lock and lifetime file lock.
+1. Serialize operations through the KoKoDB facade lock or sequential caller discipline for an independent Database. Hold the lifetime file lock.
 2. Finish the overlay, validate all constraints, and encode/bound the complete WAL frame before touching disk.
 3. Append the frame using write loops until every byte, including its commit trailer, is written. Never overwrite the committed WAL prefix.
 4. Call `FileChannel.force(true)` for the WAL. New/replaced file directory entries must already be synchronized by initialization/checkpoint protocols.
@@ -161,8 +161,8 @@ A complete valid frame can survive a crash before the writer forced or acknowled
 
 ## Close and failure state
 
-- Close rejects use inside an active transaction, waits for active operations, closes channels, releases locks, and invalidates the handle.
-- A checkpoint on close is optional for performance, not required for correctness. WAL commit is sufficient for restart recovery.
+- Close rejects use inside an active transaction, closes channels, releases locks, and invalidates the handle. KoKoDB serializes close with its other operations; independent Database instances still require sequential caller access.
+- Close does not checkpoint. A forced WAL commit is sufficient for restart recovery; checkpoints are explicit.
 - A recovery-required handle must not serve reads or writes from stale memory. Closing it must not rewrite a checkpoint from that stale state; reopening performs recovery.
 - Reopening never silently clears durable data. Existing KoKoDB memory-mode close/openInMemory behavior remains explicitly different from persistent open(path).
 

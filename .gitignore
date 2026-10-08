@@ -4,3 +4,4 @@
 .kotlin/
 build/
 /benchmarks/results/
+__pycache__/

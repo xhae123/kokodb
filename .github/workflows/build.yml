@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -18,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build :sample:run :benchmarks:run --args=smoke
+      - run: ./gradlew build :sample:run :benchmarks:run --args=smoke :benchmarks:storageSmoke
       - name: Recover sample data in a second JVM
         run: |
           python3 - <<'PY'

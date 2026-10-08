@@ -151,6 +151,8 @@ KoKoDB.close()
 
 Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
 
+The [durable storage measurements](docs/baselines/2026-10-08-durable-storage/README.md) record commit, WAL, checkpoint and recovery costs. For 1,000 INSERTs, individual commits wrote about 6.97 MB of WAL versus 13.96 kB in one transaction. Batching changes acknowledgment and rollback boundaries; full-table after-images remain a measured limitation.
+
 ## Build setup
 
 Requires JDK 17. The Gradle Wrapper downloads the pinned Gradle distribution on first use.
@@ -220,3 +222,5 @@ The [primary-key validation measurements](docs/baselines/2026-10-08-constraint-v
 The [transaction and persistence design](docs/transactions-and-persistence.md) records transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
 
 Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.
+
+The [development roadmap](docs/roadmap.md) records the current alpha boundary, measured optimization priorities, and release gates.
