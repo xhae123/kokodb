@@ -121,6 +121,7 @@ class TransactionTest {
         val db = database()
         lateinit var captured: Transaction
         db.transaction { captured = this }
+        assertTrue(captured.state.catalog.entries().isEmpty())
         assertFailsWith<DatabaseException> { captured.execute("DELETE FROM balances") }
         db.transaction {
             assertFailsWith<DatabaseException> { captured.execute("DELETE FROM balances") }

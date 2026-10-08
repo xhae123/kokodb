@@ -1,11 +1,11 @@
 # Transactions and Persistence Design
 
-Status: memory SQL CRUD and synchronous transaction blocks are implemented. Version-one snapshot/WAL codecs are implemented and tested. File I/O, WAL logging, checkpoints, and recovery below remain a proposed design.
+Status: implemented development alpha. Memory SQL CRUD, synchronous transactions, version-one codecs, forced WAL commits, explicit checkpoints, ownership locks, and restart recovery are implemented. Release/platform compatibility gates remain explicit below.
 
 ## Goal and initial scope
 
 - Keep `KoKoDB<Model>(sql, params)` as the primary SELECT API and `execute()` as the write API.
-- Support one database owner and serialized transactions, initially on local filesystems with verified file and directory synchronization semantics.
+- Support one database owner and serialized transactions, on the gated local filesystem types, subject to file and directory synchronization semantics.
 - Keep the complete working catalog in memory. Use copy-on-write table snapshots rather than introducing pages, MVCC, or an optimizer in the first durable implementation.
 - Guarantee that an acknowledged persistent commit survives restart under the supported filesystem/device synchronization assumptions.
 - Recover each transaction completely or not at all, including transactions touching multiple tables or schemas.
@@ -31,7 +31,7 @@ KoKoDB.transaction {
 - Returning normally commits. A thrown exception discards the overlay. Any SQL validation, execution, or result-mapping error marks the transaction rollback-only even if the callback catches it; normal callback completion then throws a transaction-aborted error instead of committing earlier writes.
 - Transaction scopes are synchronous and owned by one thread. Nested scopes and calls to open/close/checkpoint inside a transaction fail. Access from another thread through a captured transaction handle fails rather than escaping the scope.
 - Global KoKoDB calls on the owner thread must route to the active transaction rather than silently autocommitting. Independent Database instances retain their own state and transaction boundaries.
-- UPDATE affected counts include matched rows whose values stay equal. Planned persistent transactions with no net catalog changes need no WAL record or new commit sequence.
+- UPDATE affected counts include matched rows whose values stay equal. Persistent transactions with no net catalog changes need no WAL record or new commit sequence.
 - Callback side effects outside the database are outside the transaction. No automatic retry reruns a callback.
 
 ## Mutation boundary
@@ -40,7 +40,7 @@ KoKoDB.transaction {
 - The memory transaction implementation directs that same publication into its private catalog. A successful statement is not a durable commit while an explicit transaction remains open.
 - Existing SELECT results remain detached across updates, rollbacks, close, and reopen.
 
-Persistent `KoKoDB.open(path)` is still proposed. The binary representation is implemented internally; file commit and recovery protocols are not implemented yet.
+Persistent mode uses `KoKoDB.open(path)` before SQL calls. Its parent directory must exist. The implementation currently gates OS/filesystem combinations to Linux/macOS on APFS, ext4, or overlay types and requires every synchronization/atomic replacement operation to succeed. There is no automatic checkpoint threshold yet.
 
 ## Storage choice
 
@@ -148,11 +148,11 @@ Failed checkpoints before WAL reset retain the WAL needed for recovery. Ambiguou
 ## Opening and recovery
 
 1. Acquire ownership locks before reading or repairing files.
-2. If neither authoritative file exists, initialize an empty snapshot and WAL, force both and the directory, then expose the handle. A missing WAL may complete interrupted initialization only for an empty sequence-zero snapshot; missing required files otherwise fail.
+2. If neither authoritative file exists, install/force the empty WAL and sync its directory before installing/forcing the empty snapshot and syncing again. WAL-first bootstrap allows completing initialization only when a snapshot is absent and the WAL is exactly a valid sequence-zero header. A snapshot with a missing WAL always fails: an empty sequence-zero snapshot can also belong to a live database whose committed rows were entirely in the missing WAL.
 3. Validate the snapshot header, UUID, version, lengths, checksums, schema, and rows into a temporary catalog. A corrupt snapshot is an explicit error; do not recreate an empty database.
 4. Validate the WAL header and identity. Its base may be older than or equal to the snapshot sequence; a newer base means required history is missing and opening fails.
 5. Scan frames in strict sequence. Validate all complete frames, even ones covered by the snapshot. Replay frames newer than the snapshot by replacing the dirty table after-images in a private recovered catalog.
-6. A physically incomplete terminal frame with valid bounded framing has no complete commit trailer and is ignored as an uncommitted tail. Complete checksum/trailer failures, bad headers, sequence gaps, or corruption within the prefix fail opening; do not scan past them searching for a later record.
+6. A physically incomplete terminal frame whose complete prefix fields have valid bounded framing has no complete commit trailer and is ignored as an uncommitted tail. Complete checksum/trailer failures, bad headers, sequence gaps, or corruption within the prefix fail opening; do not scan past them searching for a later record.
 7. Only after the whole valid prefix is checked, truncate/force an ignored incomplete tail before allowing new appends, or perform a safe checkpoint when the WAL predates the snapshot. Do not repair a file during read-only validation.
 8. Reconcile generated models: reuse exactly matching persisted schemas; a mismatch fails open. Missing generated tables are created through the normal commit protocol. Do not silently drop/recreate persisted tables.
 9. Publish the recovered committed catalog and expose the handle.
@@ -179,7 +179,7 @@ A complete valid frame can survive a crash before the writer forced or acknowled
 - At each injected crash point, reopen in a new process. A transaction must be fully present or absent, and every acknowledged transaction must be present.
 - Inject truncation at every position in a sample terminal frame, corruption in header/payload/trailer, unknown versions, UUID mismatches, missing sidecars, and sequence gaps.
 - Compare recovered results with a reference model and exercise both clean and unclean shutdown. Passing a clean close/reopen test alone is insufficient.
-- Do not advertise disk durability or ACID transactions until these gates pass. Storage format compatibility promises begin only at a documented release; development snapshots may reject older formats explicitly.
+- Commit/recovery fault and subprocess gates run in the test suite. Real power-loss simulation, broader filesystem/JVM qualification, performance comparisons, publication, and compatibility guarantees remain release work. Storage format compatibility promises begin only at a documented release; development snapshots may reject older formats explicitly.
 
 ## Sources and alternatives
 

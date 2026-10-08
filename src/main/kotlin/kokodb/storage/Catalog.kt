@@ -21,4 +21,14 @@ internal class Catalog {
     }
 
     fun entries(): Map<String, Table> = tables.toMap()
+
+    fun restore(changes: Map<String, Table>) {
+        for ((name, table) in changes) {
+            val previous = tables[name]
+            if (previous != null && previous.columns != table.columns) {
+                throw DatabaseException("Stored schema changed for table '$name'")
+            }
+            tables[name] = table.fork()
+        }
+    }
 }

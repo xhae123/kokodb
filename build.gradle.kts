@@ -26,4 +26,5 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("kokodb.test.classpath", sourceSets["test"].runtimeClasspath.asPath)
 }

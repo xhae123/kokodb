@@ -4,7 +4,7 @@ Everything you need for a small SQL database, in one simple Kotlin library.
 
 KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API is `KoKoDB<Model>(sql, params)`: write SQL and receive Kotlin objects from a shared database, without JDBC, a separate server, or a required repository layer.
 
-The goal is a small, easy-to-adopt database with minimal dependencies and low resource overhead. Storage is currently memory-only; disk persistence is not implemented.
+The goal is a small, easy-to-adopt database with minimal dependencies and low resource overhead. Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope.
 
 The problem we target is the deployment and resource cost of relational storage in small Kotlin/JVM applications. A JVM implementation can avoid separately packaged native database binaries and expose the execution, allocation, and recovery paths directly. That alone does not establish lower memory use or better performance: we measure artifact size, fresh-process startup, process RSS, and workload allocation before making those claims.
 
@@ -80,9 +80,9 @@ Each write statement validates its entire candidate state before publishing chan
 
 - The first query or execute call opens the shared memory database lazily. Its model definitions come from the calling thread's context class loader, falling back to the library class loader.
 - `KoKoDB.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
-- `KoKoDB.close()` discards the shared memory store. Calls then fail until `openInMemory()` explicitly opens a fresh store. Repeated closes are harmless, and previously returned results remain detached.
+- `KoKoDB.close()` discards memory-mode data and closes file-mode storage without deleting committed data. Calls then fail until `openInMemory()` or `open(path)` explicitly reopens a store. Repeated closes are harmless, and previously returned results remain detached.
 - Each shared API call and explicit transaction callback is serialized. Concurrent callers wait for the active operation; separate calls outside a transaction do not commit together.
-- The singleton is shared within its loaded JVM class loader. It is not shared across processes or persisted across application restarts.
+- The singleton is shared within its loaded JVM class loader. Separate processes cannot share an open database handle; file mode recovers committed data after restart.
 
 ```kotlin
 KoKoDB.close()
@@ -115,7 +115,41 @@ KoKoDB.transaction {
 - Use `query<Model>()` for typed results and `queryRows()` for raw rows inside the scope. Independent databases support `db.transaction { ... }` too.
 - Scopes are synchronous and owned by one thread. Captured handles reject another thread or reuse after completion. Nested scopes and shared close/open inside a scope fail and abort it if caught.
 - Transaction callbacks are never automatically retried. External side effects are not rolled back; do not wait for another thread to call KoKoDB while holding its transaction lock.
-- Memory commit is not durable storage. A process exit or close still discards all memory data.
+- Memory-mode commit is not durable storage. A process exit or close discards memory data; file-mode commit forces the WAL before success.
+
+## Persistent storage and restart recovery
+
+Memory data disappears when the process exits. When rows must survive restart, open a file before using the same SQL API:
+
+```kotlin
+import java.nio.file.Path
+
+KoKoDB.open(Path.of("app.koko"))
+try {
+    KoKoDB.transaction {
+        execute("INSERT INTO users VALUES (:id, :name)", mapOf("id" to 1, "name" to "Koko"))
+    }
+    KoKoDB.checkpoint()
+} finally {
+    KoKoDB.close()
+}
+
+KoKoDB.open(Path.of("app.koko"))
+val restored = KoKoDB<User>("SELECT * FROM users WHERE id = 1")
+KoKoDB.close()
+```
+
+- The parent directory must already exist. Initial support is Linux/macOS with APFS, ext4, or overlay filesystem types and functioning file force, atomic replacement, directory force, and OS locks. Other combinations fail explicitly. Network filesystems, aliases/hard links, live file renaming, and multiple owners are outside the supported contract.
+- A write outside a scope is an autocommit transaction. File commits append one checked multi-table after-image frame, force the WAL, publish memory state, then return success. No net change adds no frame.
+- The database uses the chosen path plus `.wal` and `.lock` sidecars. Keep the pair together when closed; a missing/corrupt required file is an error, never an instruction to recreate empty data. Symbolic-link database/sidecar paths are rejected.
+- `checkpoint()` writes/forces a snapshot, atomically replaces it and syncs its directory, then installs a forced empty WAL. It is explicit: WAL grows until checkpointed. Closing releases ownership without requiring a checkpoint.
+- Restart validates versions, identities, checksums, sequence continuity, schemas, and keys before exposing state. A bounded incomplete terminal WAL frame is discarded; complete corruption fails open. Matching generated schemas are reused, missing model tables are durably created, and mismatches fail.
+- `CommitOutcomeUnknownException` means writing began but append/force failed. The transaction may be durable. Reads/writes/checkpoints then fail until close/reopen; retry only with application-level idempotency. A crash can also commit a transaction whose caller received no response.
+- Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Full dirty-table after-images amplify write volume. The entire working catalog must fit in JVM memory.
+- Supported durability relies on the filesystem/device honoring synchronization. Tests inject I/O errors and terminate child JVMs at commit/checkpoint boundaries; they do not simulate hardware power loss.
+- The format is versioned, but cross-release compatibility is not promised before a documented release. Artifacts are not published yet.
+
+Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
 
 ## Build setup
 
@@ -179,8 +213,8 @@ The parser builds a shared query representation. The executor validates schemas,
 - One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
 - DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
 
-Disk persistence, indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
+Indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
 
-The [transaction and persistence design](docs/transactions-and-persistence.md) specifies future transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions are implemented; persistent APIs and storage mechanisms remain planned.
+The [transaction and persistence design](docs/transactions-and-persistence.md) records transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
 
 Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.
