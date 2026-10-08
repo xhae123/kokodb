@@ -215,6 +215,8 @@ The parser builds a shared query representation. The executor validates schemas,
 
 Indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
 
+The [primary-key validation measurements](docs/baselines/2026-10-08-constraint-validation/README.md) record an allocation reduction from 281.1 to 21.7 KiB per non-key UPDATE at 5,000 rows, with raw observations and interpretation limits.
+
 The [transaction and persistence design](docs/transactions-and-persistence.md) records transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
 
 Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.
