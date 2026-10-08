@@ -2,6 +2,8 @@ package kokodb.execution
 
 import kokodb.DatabaseException
 import kokodb.Row
+import kokodb.mapping.ModelAdapter
+import kokodb.mapping.ModelValues
 import kokodb.query.Equality
 import kokodb.query.Expression
 import kokodb.query.Projection
@@ -64,9 +66,31 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
     }
 
-    fun query(statement: Statement, params: Map<String, Any?>): List<Row> = queryMapped(statement, params) { it }
+    fun query(statement: Statement, params: Map<String, Any?>): List<Row> {
+        val selection = select(statement, params)
+        return selection.table.rows.asSequence()
+            .filter { matches(it, selection.filter) }
+            .map { row -> Row(selection.indices.associate { selection.table.columns[it].name to row[it] }) }
+            .toList()
+    }
 
-    fun <R> queryMapped(statement: Statement, params: Map<String, Any?>, transform: (Row) -> R): List<R> {
+    fun <M : Any> queryModels(statement: Statement, params: Map<String, Any?>, adapter: ModelAdapter<M>): List<M> {
+        val selection = select(statement, params)
+        val result = if (selection.filter == null) ArrayList<M>(selection.table.rows.size) else ArrayList<M>()
+        val values = StoredModelValues()
+        for (row in selection.table.rows) {
+            if (!matches(row, selection.filter)) continue
+            values.row = row
+            try {
+                result.add(adapter.readValues(values))
+            } finally {
+                values.row = null
+            }
+        }
+        return result
+    }
+
+    private fun select(statement: Statement, params: Map<String, Any?>): Selection {
         if (statement !is Statement.Select) throw DatabaseException("Use execute() for statements other than SELECT")
         val table = catalog.table(statement.table)
         validateSchema(table, statement.expectedSchema)
@@ -81,10 +105,27 @@ internal class Executor(private val catalog: Catalog) {
         }
         // Resolve and validate before scanning so invalid queries also fail on empty tables.
         val filter = statement.condition?.let { resolveFilter(table, it, params) }
-        return table.rows.asSequence()
-            .filter { row -> matches(row, filter) }
-            .map { row -> transform(Row(indices.associate { table.columns[it].name to row[it] })) }
-            .toList()
+        return Selection(table, indices, filter)
+    }
+
+    private data class Selection(val table: Table, val indices: List<Int>, val filter: Pair<Int, Value>?)
+
+    private class StoredModelValues : ModelValues {
+        var row: List<Value>? = null
+
+        override fun getInt(index: Int): Int = when (val value = value(index)) {
+            is Value.IntValue -> value.value
+            else -> throw DatabaseException("Model column $index is not INT")
+        }
+
+        override fun getString(index: Int): String = when (val value = value(index)) {
+            is Value.TextValue -> value.value
+            else -> throw DatabaseException("Model column $index is not TEXT")
+        }
+
+        private fun value(index: Int): Value =
+            (row ?: throw DatabaseException("Model values are no longer active")).getOrNull(index)
+                ?: throw DatabaseException("Unknown model column position $index")
     }
 
     private fun matches(row: List<Value>, filter: Pair<Int, Value>?): Boolean =
