@@ -1,6 +1,6 @@
 # Transactions and Persistence Design
 
-Status: memory SQL CRUD and synchronous transaction blocks are implemented. File storage, WAL, checkpoints, and recovery below remain a proposed design.
+Status: memory SQL CRUD and synchronous transaction blocks are implemented. Version-one snapshot/WAL codecs are implemented and tested. File I/O, WAL logging, checkpoints, and recovery below remain a proposed design.
 
 ## Goal and initial scope
 
@@ -40,7 +40,7 @@ KoKoDB.transaction {
 - The memory transaction implementation directs that same publication into its private catalog. A successful statement is not a durable commit while an explicit transaction remains open.
 - Existing SELECT results remain detached across updates, rollbacks, close, and reopen.
 
-Persistent `KoKoDB.open(path)` is still proposed; the following storage protocols are not implemented yet.
+Persistent `KoKoDB.open(path)` is still proposed. The binary representation is implemented internally; file commit and recovery protocols are not implemented yet.
 
 ## Storage choice
 
@@ -69,7 +69,7 @@ Use a versioned binary snapshot plus an append-only transaction WAL containing t
 
 ## Binary format, version 1
 
-All numeric fields use fixed-width big-endian encoding. Every length-prefixed name uses an unsigned 32-bit byte length. Names are normalized ASCII SQL identifiers; text values preserve exact case and use strict UTF-8. Malformed UTF-16 surrogate sequences are rejected before any WAL append, not silently replaced.
+All numeric fields use fixed-width big-endian encoding. Commit sequences are supported from zero through Long.MAX_VALUE; values with the unsigned high bit set are rejected, and sequence exhaustion must fail before writing. Every length-prefixed name uses an unsigned 32-bit byte length. Names are normalized ASCII SQL identifiers; text values preserve exact case and use strict UTF-8. Malformed UTF-16 surrogate sequences are rejected before any WAL append, not silently replaced.
 
 ### Snapshot
 

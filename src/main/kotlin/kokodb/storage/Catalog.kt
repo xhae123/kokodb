@@ -19,4 +19,6 @@ internal class Catalog {
     fun fork(): Catalog = Catalog().also { copy ->
         tables.forEach { (name, table) -> copy.tables[name] = table.fork() }
     }
+
+    fun entries(): Map<String, Table> = tables.toMap()
 }
