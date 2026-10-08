@@ -1,2 +1,2 @@
 rootProject.name = "kokodb"
-include("processor", "sample", "benchmarks", "comparison")
+include("processor", "compiler-plugin", "sample", "benchmarks", "comparison")

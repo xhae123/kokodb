@@ -51,7 +51,7 @@ No application database wrapper, service class, repository declaration, or manua
 - Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
 - `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before INSERT or UPDATE changes any rows. A key is not required for typed queries.
 - SQL identifiers are case-insensitive. String values and parameter names remain case-sensitive. Parameters bind Int/String values; null and implicit type conversion are unsupported.
-- Input SQL and stored schemas are validated at execution time. Kotlin checks result assignment types, not SQL text.
+- The optional SQL compiler plugin checks static SQL syntax and query/write call categories during Kotlin/JVM compilation. Dynamic SQL and stored schemas remain validated at execution time; Kotlin result assignment checks are separate.
 - Mutating a returned model does not write to the database. There is no automatic dirty checking.
 
 ## Raw SQL
@@ -183,6 +183,8 @@ dependencies {
 ```
 
 Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library.
+
+The sample also enables the optional SQL compiler plugin, so `KoKoDB<User>("SELEC * FROM users")` fails its Kotlin build. It reuses the runtime parser and warns for dynamic SQL; it does not check schema existence, projections, or parameter maps. See [compile-time SQL validation](docs/compile-time-sql-validation.md) for consumer setup, qualified compiler versions, research, and exact coverage.
 
 The [Kotlin model comparison](docs/baselines/2026-10-08-kotlin-model-query/README.md) measures generated KoKoDB results against H2 2.5.252 prepared queries with direct constructor mapping. In the warmed 1,000-row full-model fixture, KoKoDB measured 7.21 us/query versus H2's 19.15 us, with comparable allocation. This is a scoped result, not a general engine-performance claim.
 

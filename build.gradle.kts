@@ -25,6 +25,10 @@ dependencies {
 }
 
 tasks.test {
+    val sqlCompilerJar = layout.projectDirectory.file("compiler-plugin/build/libs/kokodb-sql-compiler-plugin.jar")
+    dependsOn(":compiler-plugin:jar")
+    inputs.file(sqlCompilerJar).withPropertyName("kokoSqlCompilerPlugin").withPathSensitivity(PathSensitivity.NONE)
     useJUnitPlatform()
     systemProperty("kokodb.test.classpath", sourceSets["test"].runtimeClasspath.asPath)
+    systemProperty("kokodb.test.sqlPlugin", sqlCompilerJar.asFile)
 }
