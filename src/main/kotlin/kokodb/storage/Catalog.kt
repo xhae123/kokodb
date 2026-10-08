@@ -15,4 +15,8 @@ internal class Catalog {
 
     fun table(name: String): Table =
         tables[name] ?: throw DatabaseException("Unknown table '$name'")
+
+    fun fork(): Catalog = Catalog().also { copy ->
+        tables.forEach { (name, table) -> copy.tables[name] = table.fork() }
+    }
 }

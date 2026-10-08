@@ -1,6 +1,6 @@
 package kokodb
 
-/** A lazily opened, shared in-memory database. Each call is serialized; multiple calls are not a transaction. */
+/** A lazily opened, shared in-memory database. Calls and explicit transaction scopes are serialized. */
 object KoKoDB {
     private val lock = Any()
     private var database: Database? = null
@@ -27,10 +27,14 @@ object KoKoDB {
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
         withDatabase { it.query(sql, params) }
 
+    /** Commits the synchronous callback as one unit. Other shared callers wait until it finishes. */
+    fun <R> transaction(block: Transaction.() -> R): R = withDatabase { it.transaction(block) }
+
     /** Opens a fresh database explicitly. An already-open database is an error; close it before replacing it. */
     fun openInMemory(
         classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
     ) = synchronized(lock) {
+        database?.requireNoTransaction("openInMemory")
         if (database != null) throw DatabaseException("KoKoDB is already open; close it before opening a new database")
         database = Database.inMemory(classLoader)
         closed = false
@@ -38,6 +42,7 @@ object KoKoDB {
 
     /** Discards the shared memory store. Further calls require openInMemory(); repeated closes are harmless. */
     fun close() = synchronized(lock) {
+        database?.requireNoTransaction("close")
         database = null
         closed = true
     }

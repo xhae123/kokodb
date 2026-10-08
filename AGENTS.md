@@ -14,9 +14,9 @@ Target the deployment and resource cost of relational storage in small Kotlin/JV
 - A model declares persisted data. Do not require a separate domain class with the same fields or expose generated table descriptors in ordinary model usage.
 - Call a stored table entry a row. Reserve `Table` and `Column` for relational schema concepts and their lower-level APIs.
 - Keep persistence operations separate from model instances. Do not require models to inherit a persistence base class.
-- Use `@DbTable` for generated table mapping and optional `@Id` for a caller-supplied single-column primary key. Keep models detached and writes explicit. Typed SQL currently requires complete mapped models; do not imply arbitrary DTO mapping, automatic dirty checking, generated keys, or transactions.
+- Use `@DbTable` for generated table mapping and optional `@Id` for a caller-supplied single-column primary key. Keep models detached and writes explicit. Typed SQL currently requires complete mapped models; do not imply arbitrary DTO mapping, automatic dirty checking, generated keys, disk persistence, or asynchronous transactions.
 - Use `KoKoDB<Model>(sql, params)` in primary examples, `KoKoDB.execute()` for SQL writes, and `KoKoDB.query()` for raw rows. Do not require application database wrappers, services, or repositories.
-- KoKoDB lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Do not describe multiple serialized calls as a transaction.
+- KoKoDB lazily opens one shared memory database and serializes each call. Document close/reopen behavior and retain independent Database instances for isolation. Only explicit transaction scopes group calls atomically. Keep rollback-only, owner-thread, and completed-scope rules explicit.
 - Preserve statement atomicity: validate complete candidate state before publishing writes, including primary-key changes across multiple rows. Keep the proposed transaction and persistence contract in `docs/transactions-and-persistence.md` distinct from implemented guarantees.
 
 # General Principles
