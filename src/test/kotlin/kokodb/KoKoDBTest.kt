@@ -20,23 +20,23 @@ data class SharedNote(val id: Int, val text: String)
 
 data class Unregistered(val id: Int)
 
-class KokoDbTest {
+class KoKoDBTest {
     @BeforeTest
     fun open() {
-        KokoDb.close()
-        KokoDb.openInMemory()
+        KoKoDB.close()
+        KoKoDB.openInMemory()
     }
 
     @AfterTest
     fun close() {
-        KokoDb.close()
+        KoKoDB.close()
     }
 
-    private fun register(id: Int, name: String) = KokoDb.execute(
+    private fun register(id: Int, name: String) = KoKoDB.execute(
         "INSERT INTO shared_users VALUES (:id, :name)", mapOf("id" to id, "name" to name)
     )
 
-    private fun find(id: Int): List<SharedUser> = KokoDb<SharedUser>(
+    private fun find(id: Int): List<SharedUser> = KoKoDB<SharedUser>(
         "SELECT id, name FROM shared_users WHERE id = :id", mapOf("id" to id)
     )
 
@@ -45,9 +45,29 @@ class KokoDbTest {
         assertEquals(1, register(1, "Koko"))
         assertEquals(listOf(SharedUser(1, "Koko")), find(1))
         register(2, "Other")
-        assertEquals(2, KokoDb<SharedUser>("SELECT * FROM shared_users").size)
+        assertEquals(2, KoKoDB<SharedUser>("SELECT * FROM shared_users").size)
         assertTrue(Database.inMemory().queryModels(SharedUser::class.java, "SELECT * FROM shared_users").isEmpty())
-        assertEquals("Koko", KokoDb.query("SELECT name FROM shared_users WHERE id = 1").single().getString("name"))
+        assertEquals("Koko", KoKoDB.query("SELECT name FROM shared_users WHERE id = 1").single().getString("name"))
+    }
+
+    @Test
+    fun `typed queries observe atomic SQL updates and deletes`() {
+        register(1, "Original")
+        register(2, "Other")
+        val detached = find(1).single()
+        assertEquals(1, KoKoDB.execute(
+            "UPDATE shared_users SET name = :name WHERE id = :id",
+            mapOf("name" to "Updated", "id" to 1),
+        ))
+        assertEquals(listOf(SharedUser(1, "Updated")), find(1))
+        assertEquals("Original", detached.name)
+        assertFailsWith<DatabaseException> {
+            KoKoDB.execute("UPDATE shared_users SET id = 2, name = 'Rejected' WHERE id = 1")
+        }
+        assertEquals(listOf(SharedUser(1, "Updated")), find(1))
+        assertEquals(1, KoKoDB.execute("DELETE FROM shared_users WHERE id = :id", mapOf("id" to 1)))
+        assertTrue(find(1).isEmpty())
+        assertEquals(listOf(SharedUser(2, "Other")), find(2))
     }
 
     @Test
@@ -55,11 +75,11 @@ class KokoDbTest {
         val name = "Koko' OR id = 2"
         register(1, name)
         register(2, "Other")
-        assertEquals(listOf(SharedUser(1, name)), KokoDb<SharedUser>(
+        assertEquals(listOf(SharedUser(1, name)), KoKoDB<SharedUser>(
             "SELECT NAME, ID FROM SHARED_USERS WHERE name = :name", mapOf("name" to name)
         ))
         assertTrue(find(3).isEmpty())
-        assertEquals(listOf(SharedUser(1, name)), KokoDb.queryModels(
+        assertEquals(listOf(SharedUser(1, name)), KoKoDB.queryModels(
             SharedUser::class.java, "SELECT * FROM shared_users WHERE id = 1"
         ))
     }
@@ -71,20 +91,20 @@ class KokoDbTest {
             "SELECT id, id FROM shared_users",
             "SELECT id, name, unknown FROM shared_users",
             "SELECT * FROM shared_notes",
-        )) assertFailsWith<DatabaseException> { KokoDb<SharedUser>(sql) }
-        assertFailsWith<DatabaseException> { KokoDb<Unregistered>("SELECT * FROM shared_users") }
-        assertFailsWith<DatabaseException> { KokoDb<SharedUser>("INSERT INTO shared_users VALUES (1, 'Unexpected')") }
-        assertTrue(KokoDb<SharedUser>("SELECT * FROM shared_users").isEmpty())
-        assertFailsWith<SqlSyntaxException> { KokoDb<SharedUser>("SELECT FROM") }
+        )) assertFailsWith<DatabaseException> { KoKoDB<SharedUser>(sql) }
+        assertFailsWith<DatabaseException> { KoKoDB<Unregistered>("SELECT * FROM shared_users") }
+        assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("INSERT INTO shared_users VALUES (1, 'Unexpected')") }
+        assertTrue(KoKoDB<SharedUser>("SELECT * FROM shared_users").isEmpty())
+        assertFailsWith<SqlSyntaxException> { KoKoDB<SharedUser>("SELECT FROM") }
     }
 
     @Test
     fun `invalid parameters and predicates fail even on empty results`() {
         val sql = "SELECT * FROM shared_users WHERE id = :id"
         for (params in listOf(emptyMap(), mapOf("id" to "one"), mapOf("id" to 1L), mapOf("id" to null))) {
-            assertFailsWith<DatabaseException> { KokoDb<SharedUser>(sql, params) }
+            assertFailsWith<DatabaseException> { KoKoDB<SharedUser>(sql, params) }
         }
-        assertFailsWith<DatabaseException> { KokoDb<SharedUser>("SELECT * FROM shared_users WHERE missing = 1") }
+        assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("SELECT * FROM shared_users WHERE missing = 1") }
     }
 
     @Test
@@ -96,10 +116,10 @@ class KokoDbTest {
         assertNotSame(first, second)
         first.name = "Changed"
         assertEquals(SharedUser(1, "Original"), find(1).single())
-        val snapshot = KokoDb<SharedUser>("SELECT * FROM shared_users")
+        val snapshot = KoKoDB<SharedUser>("SELECT * FROM shared_users")
         register(2, "Later")
         assertEquals(1, snapshot.size)
-        assertEquals(2, KokoDb<SharedUser>("SELECT * FROM shared_users").size)
+        assertEquals(2, KoKoDB<SharedUser>("SELECT * FROM shared_users").size)
     }
 
     @Test
@@ -111,21 +131,21 @@ class KokoDbTest {
 
     @Test
     fun `models without primary keys map SQL results with repeated values`() {
-        KokoDb.execute("INSERT INTO shared_notes VALUES (1, 'First')")
-        KokoDb.execute("INSERT INTO shared_notes VALUES (1, 'Second')")
+        KoKoDB.execute("INSERT INTO shared_notes VALUES (1, 'First')")
+        KoKoDB.execute("INSERT INTO shared_notes VALUES (1, 'Second')")
         assertEquals(setOf(SharedNote(1, "First"), SharedNote(1, "Second")),
-            KokoDb<SharedNote>("SELECT text, id FROM shared_notes").toSet())
+            KoKoDB<SharedNote>("SELECT text, id FROM shared_notes").toSet())
     }
 
     @Test
     fun `close blocks access until an explicit fresh open`() {
         register(1, "Original")
-        KokoDb.close()
-        KokoDb.close()
+        KoKoDB.close()
+        KoKoDB.close()
         assertFailsWith<DatabaseException> { find(1) }
-        assertFailsWith<DatabaseException> { KokoDb.query("SELECT * FROM shared_users") }
+        assertFailsWith<DatabaseException> { KoKoDB.query("SELECT * FROM shared_users") }
         assertFailsWith<DatabaseException> { register(2, "Blocked") }
-        KokoDb.openInMemory()
+        KoKoDB.openInMemory()
         assertTrue(find(1).isEmpty())
         register(1, "Fresh")
         assertEquals(listOf(SharedUser(1, "Fresh")), find(1))
@@ -134,23 +154,23 @@ class KokoDbTest {
     @Test
     fun `opening an active database cannot discard its rows`() {
         register(1, "Original")
-        assertFailsWith<DatabaseException> { KokoDb.openInMemory() }
+        assertFailsWith<DatabaseException> { KoKoDB.openInMemory() }
         assertEquals(listOf(SharedUser(1, "Original")), find(1))
     }
 
     @Test
     fun `raw SQL needs no result model or generated repository`() {
-        KokoDb.close()
+        KoKoDB.close()
         val loader = object : ClassLoader(Database::class.java.classLoader) {
             override fun getResources(name: String): java.util.Enumeration<java.net.URL> =
                 if (name == "META-INF/services/kokodb.mapping.ModelProvider") java.util.Collections.emptyEnumeration()
                 else super.getResources(name)
         }
-        KokoDb.openInMemory(loader)
-        assertEquals(0, KokoDb.execute("CREATE TABLE shared_settings (name TEXT, value INT)"))
-        KokoDb.execute("INSERT INTO shared_settings VALUES (:name, :value)", mapOf("name" to "count", "value" to 3))
-        assertEquals(3, KokoDb.query("SELECT value FROM shared_settings").single().getInt("value"))
-        assertFailsWith<DatabaseException> { KokoDb<SharedUser>("SELECT * FROM shared_settings") }
+        KoKoDB.openInMemory(loader)
+        assertEquals(0, KoKoDB.execute("CREATE TABLE shared_settings (name TEXT, value INT)"))
+        KoKoDB.execute("INSERT INTO shared_settings VALUES (:name, :value)", mapOf("name" to "count", "value" to 3))
+        assertEquals(3, KoKoDB.query("SELECT value FROM shared_settings").single().getInt("value"))
+        assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("SELECT * FROM shared_settings") }
     }
 
     @Test
@@ -170,7 +190,7 @@ class KokoDbTest {
                 assertEquals(listOf(SharedUser(id, "user$id")), find(id))
             } }
             tasks.forEach { it.get(10, TimeUnit.SECONDS) }
-            assertEquals((1..100).toSet(), KokoDb<SharedUser>("SELECT * FROM shared_users").map { it.id }.toSet())
+            assertEquals((1..100).toSet(), KoKoDB<SharedUser>("SELECT * FROM shared_users").map { it.id }.toSet())
         } finally {
             workers.shutdownNow()
         }

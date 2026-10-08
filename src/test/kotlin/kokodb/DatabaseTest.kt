@@ -133,7 +133,7 @@ class DatabaseTest {
             "SELECT * FROM users WHERE id = NULL", "SELECT * FROM users WHERE id > 1",
             "SELECT * FROM users WHERE id = 1 AND name = 'Koko'", "SELECT * FROM users ORDER BY id",
             "SELECT * FROM users;;", "SELECT * FROM users; INSERT INTO users VALUES (1, 'Koko')",
-            "INSERT INTO users VALUES (1.5, 'Koko')", "UPDATE users SET name = 'Other'",
+            "INSERT INTO users VALUES (1.5, 'Koko')",
         )) {
             assertFailsWith<SqlSyntaxException>(sql) { db.execute(sql) }
         }
