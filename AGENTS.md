@@ -2,11 +2,15 @@
 
 Everything you need for a small SQL database, in one simple Kotlin library.
 
+Reduce unnecessary resource and complexity costs for Kotlin applications that use relational data. Treat Kotlin model information, generated mapping, query execution, and storage as one design surface. Writing the engine in Kotlin alone is not a moat or evidence of lower cost; validate each advantage against an equivalent established-engine path.
+
 Build a lightweight embedded relational database for Kotlin/JVM whose primary query API is `KoKoDB<Model>(sql, params)`, returning `List<Model>` from a shared database without JDBC or a separate server. SQL is the query language; generated Kotlin mapping makes typed results convenient. Raw SQL must remain usable without model declarations or code generation.
 
 Key-value storage and general-purpose object serialization are no longer the product direction. Distinguish implemented capabilities from planned APIs and document storage guarantees explicitly.
 
 Target the deployment and resource cost of relational storage in small Kotlin/JVM applications, including separately packaged native database binaries and oversized infrastructure for modest workloads. Kotlin implementation alone is not evidence of lower cost. Track runtime artifact size, fresh-JVM startup, process RSS, workload allocation, and storage correctness with reproducible measurements. Distinguish JVM overhead from database overhead and compare engines only under equivalent workloads and durability settings.
+
+H2 is already a pure-Java embedded database, so absence of native binaries and a separate server does not distinguish KoKoDB from H2. Compare generated Kotlin model results with H2 prepared statements and direct constructor mapping before claiming an advantage. Keep inferred product opportunities distinct from implemented and measured capabilities.
 
 # Naming and Model Conventions
 

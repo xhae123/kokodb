@@ -4,9 +4,13 @@ Everything you need for a small SQL database, in one simple Kotlin library.
 
 KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API is `KoKoDB<Model>(sql, params)`: write SQL and receive Kotlin objects from a shared database, without JDBC, a separate server, or a required repository layer.
 
-The goal is a small, easy-to-adopt database with minimal dependencies and low resource overhead. Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope.
+Our goal is to reduce unnecessary resource and complexity costs for Kotlin applications that use relational data. We design model information, generated mapping, query execution, and storage together, and measure the resulting cost rather than treating the implementation language as proof of an advantage.
+
+Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope.
 
 The problem we target is the deployment and resource cost of relational storage in small Kotlin/JVM applications. A JVM implementation can avoid separately packaged native database binaries and expose the execution, allocation, and recovery paths directly. That alone does not establish lower memory use or better performance: we measure artifact size, fresh-process startup, process RSS, and workload allocation before making those claims.
+
+[H2](https://h2database.com/html/features.html) is already a pure-Java embedded SQL database. Native-binary absence and server-free deployment therefore do not distinguish us from H2. Our Kotlin-specific experiments compare generated model results with prepared JDBC queries and direct model construction, including their actual allocation and execution cost.
 
 ## Getting started
 
