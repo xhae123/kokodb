@@ -10,27 +10,39 @@ import kokodb.sql.Parser
 import kokodb.storage.Catalog
 import kokodb.storage.Column
 import kokodb.storage.DataType
+import kokodb.storage.FileStore
+import kokodb.storage.StoreIO
+import java.nio.file.Path
 import java.util.ServiceLoader
 
 /**
- * A memory-only database for sequential use. Instances do not share data and are not thread-safe.
+ * An independent database for sequential use. Instances do not share data and are not thread-safe.
  * Named parameters accept Int or String values; invalid SQL or execution throws [DatabaseException].
  */
-class Database private constructor(classLoader: ClassLoader) {
-    private var state = DatabaseState(Catalog())
+class Database private constructor(classLoader: ClassLoader, private val store: FileStore? = null) : AutoCloseable {
+    private var state = DatabaseState(store?.takeCatalog() ?: Catalog())
+    private var closed = false
     @Volatile private var activeTransaction: Transaction? = null
     private val models = mutableMapOf<Class<*>, ModelAdapter<*>>()
 
     init {
         val providers = ServiceLoader.load(ModelProvider::class.java, classLoader)
+        val tables = mutableSetOf<String>()
+        val pending = DatabaseState(state.catalog.fork())
         for (provider in providers) {
             for (adapter in provider.adapters()) {
                 if (models.putIfAbsent(adapter.modelClass, adapter) != null) {
                     throw DatabaseException("Duplicate generated adapter for '${adapter.modelClass.name}'")
                 }
-                state.executor.execute(Statement.CreateTable(adapter.tableName, schema(adapter)), emptyMap())
+                if (!tables.add(adapter.tableName)) throw DatabaseException("Duplicate generated table '${adapter.tableName}'")
+                val expected = schema(adapter)
+                val existing = pending.catalog.entries()[adapter.tableName]
+                if (existing == null) pending.executor.execute(Statement.CreateTable(adapter.tableName, expected), emptyMap())
+                else if (existing.columns != expected) throw DatabaseException("Generated model does not match stored schema '${adapter.tableName}'")
             }
         }
+        store?.commit(state.catalog, pending.catalog)
+        state = pending
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -43,7 +55,7 @@ class Database private constructor(classLoader: ClassLoader) {
 
     /** Executes one write statement. Returns 0 for CREATE TABLE and matched row counts for INSERT/UPDATE/DELETE. */
     fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
-        withExecutor { it.execute(Parser(sql).parse(), params) }
+        withExecutor(write = true) { it.execute(Parser(sql).parse(), params) }
 
     /** Executes one SELECT and returns detached rows with no guaranteed order. */
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
@@ -72,16 +84,18 @@ class Database private constructor(classLoader: ClassLoader) {
 
     /** Commits all callback writes together, or discards them on failure. Caught database errors still abort commit. */
     fun <R> transaction(block: Transaction.() -> R): R {
+        requireOpen()
         requireNoTransaction("begin a nested transaction")
         val transaction = Transaction(this, DatabaseState(state.catalog.fork()))
         activeTransaction = transaction
         return try {
             val result = transaction.block()
             transaction.requireCommittable()
+            store?.commit(state.catalog, transaction.state.catalog)
             state = transaction.state
             result
         } finally {
-            transaction.active = false
+            transaction.finish()
             activeTransaction = null
         }
     }
@@ -90,9 +104,34 @@ class Database private constructor(classLoader: ClassLoader) {
         activeTransaction?.run { throw DatabaseException("Cannot $operation inside a transaction") }
     }
 
-    private fun <R> withExecutor(operation: (Executor) -> R): R {
-        val transaction = activeTransaction ?: return operation(state.executor)
-        return transaction.run { operation(transaction.state.executor) }
+    private fun <R> withExecutor(write: Boolean = false, operation: (Executor) -> R): R {
+        requireOpen()
+        val transaction = activeTransaction
+        if (transaction != null) return transaction.run { operation(transaction.state.executor) }
+        if (write && store != null) return transaction { run { operation(this.state.executor) } }
+        return operation(state.executor)
+    }
+
+    /** Writes a durable snapshot and resets its WAL. Memory databases and active transactions reject checkpoints. */
+    fun checkpoint() {
+        requireOpen()
+        requireNoTransaction("checkpoint")
+        (store ?: throw DatabaseException("Memory databases have no checkpoint")).checkpoint(state.catalog)
+    }
+
+    override fun close() {
+        requireNoTransaction("close")
+        if (closed) return
+        closed = true
+        try { store?.close() } finally {
+            state = DatabaseState(Catalog())
+            models.clear()
+        }
+    }
+
+    private fun requireOpen() {
+        if (closed) throw DatabaseException("Database is closed")
+        store?.requireHealthy()
     }
 
     private fun schema(adapter: ModelAdapter<*>): List<Column> = adapter.columns.map {
@@ -104,6 +143,20 @@ class Database private constructor(classLoader: ClassLoader) {
     }
 
     companion object {
+        /** Opens a file database with exclusive ownership. Commits force WAL before acknowledgment. */
+        fun open(
+            path: Path,
+            classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
+        ): Database = open(path, classLoader, StoreIO())
+
+        internal fun open(path: Path, classLoader: ClassLoader, io: StoreIO): Database {
+            val store = FileStore.open(path, io)
+            return try { Database(classLoader, store) } catch (error: Throwable) {
+                runCatching { store.close() }.exceptionOrNull()?.let(error::addSuppressed)
+                throw error
+            }
+        }
+
         /** Discovers generated model providers visible to the class loader and prepares their tables. */
         fun inMemory(
             classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,

@@ -8,7 +8,9 @@ internal class DatabaseState(val catalog: Catalog) {
 }
 
 /** A synchronous, thread-owned transaction scope. Results are detached; a completed scope cannot be reused. */
-class Transaction internal constructor(private val database: Database, internal val state: DatabaseState) {
+class Transaction internal constructor(private val database: Database, state: DatabaseState) {
+    internal var state = state
+        private set
     private val owner = Thread.currentThread()
     @Volatile internal var active = true
     internal var failure: Throwable? = null
@@ -46,6 +48,11 @@ class Transaction internal constructor(private val database: Database, internal 
 
     internal fun requireCommittable() {
         failure?.let { throw aborted(it) }
+    }
+
+    internal fun finish() {
+        active = false
+        state = DatabaseState(Catalog())
     }
 
     private fun checkAccess() {

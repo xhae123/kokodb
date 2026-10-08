@@ -20,3 +20,8 @@ dependencies {
 application {
     mainClass = "sample.MainKt"
 }
+
+tasks.register<JavaExec>("runPersistent") {
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("sample.PersistentMainKt")
+}

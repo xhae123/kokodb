@@ -1,6 +1,8 @@
 package kokodb
 
-/** A lazily opened, shared in-memory database. Calls and explicit transaction scopes are serialized. */
+import java.nio.file.Path
+
+/** A shared database, lazily opened in memory unless a file is opened explicitly. Calls/scopes are serialized. */
 object KoKoDB {
     private val lock = Any()
     private var database: Database? = null
@@ -30,6 +32,20 @@ object KoKoDB {
     /** Commits the synchronous callback as one unit. Other shared callers wait until it finishes. */
     fun <R> transaction(block: Transaction.() -> R): R = withDatabase { it.transaction(block) }
 
+    /** Opens persistent storage explicitly. The parent directory must exist and the database must have one owner. */
+    fun open(
+        path: Path,
+        classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
+    ) = synchronized(lock) {
+        database?.requireNoTransaction("open")
+        if (database != null) throw DatabaseException("KoKoDB is already open; close it before opening a database")
+        closed = true
+        database = Database.open(path, classLoader)
+        closed = false
+    }
+
+    fun checkpoint() = withDatabase { it.checkpoint() }
+
     /** Opens a fresh database explicitly. An already-open database is an error; close it before replacing it. */
     fun openInMemory(
         classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
@@ -40,15 +56,19 @@ object KoKoDB {
         closed = false
     }
 
-    /** Discards the shared memory store. Further calls require openInMemory(); repeated closes are harmless. */
-    fun close() = synchronized(lock) {
-        database?.requireNoTransaction("close")
-        database = null
-        closed = true
+    /** Closes the shared handle. Memory rows are discarded; file commits remain durable. Reopening is explicit. */
+    fun close() {
+        synchronized(lock) {
+            database?.requireNoTransaction("close")
+            try { database?.close() } finally {
+                database = null
+                closed = true
+            }
+        }
     }
 
     private fun <R> withDatabase(operation: (Database) -> R): R = synchronized(lock) {
-        if (closed) throw DatabaseException("KoKoDB is closed; call openInMemory() before using it again")
+        if (closed) throw DatabaseException("KoKoDB is closed; call open() or openInMemory() before using it again")
         val current = database ?: Database.inMemory().also { database = it }
         operation(current)
     }

@@ -19,3 +19,13 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build :sample:run :benchmarks:run --args=smoke
+      - name: Recover sample data in a second JVM
+        run: |
+          python3 - <<'PY'
+          import subprocess, tempfile
+          from pathlib import Path
+          with tempfile.TemporaryDirectory(prefix="kokodb-sample-") as directory:
+              command = ["./gradlew", ":sample:runPersistent", "--args=" + str(Path(directory) / "app.koko")]
+              subprocess.run(command, check=True)
+              subprocess.run(command, check=True)
+          PY
