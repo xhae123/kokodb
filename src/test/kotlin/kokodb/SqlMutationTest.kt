@@ -191,4 +191,73 @@ class SqlMutationTest {
             assertEquals(expected, rows(db), "step $step")
         }
     }
+
+    @Test
+    fun `tables without a primary key allow duplicates across inserts and updates`() {
+        Database.inMemory().use { db ->
+            db.execute("CREATE TABLE duplicates (name TEXT, value INT)")
+            repeat(3) { db.execute("INSERT INTO duplicates VALUES ('Same', 1)") }
+            assertEquals(3, db.execute("UPDATE duplicates SET value = 2"))
+            val rows = db.query("SELECT * FROM duplicates")
+            assertEquals(3, rows.size)
+            assertTrue(rows.all { it.getString("name") == "Same" && it.getInt("value") == 2 })
+        }
+    }
+
+    @Test
+    fun `random key mutations preserve uniqueness when primary key is the last column`() {
+        Database.inMemory().use { db ->
+            db.execute("CREATE TABLE last_key (name TEXT, id INT PRIMARY KEY)")
+            val expected = mutableMapOf<Int, String>()
+            val random = Random(1921)
+            repeat(500) { step ->
+                val id = random.nextInt(20)
+                val target = random.nextInt(20)
+                val name = "name${random.nextInt(4)}"
+                when (random.nextInt(5)) {
+                    0 -> if (id in expected) {
+                        assertFailsWith<DatabaseException> {
+                            db.execute("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
+                        }
+                    } else {
+                        db.execute("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
+                        expected[id] = name
+                    }
+                    1 -> {
+                        val params = mapOf("id" to id, "target" to target, "name" to name)
+                        val sql = "UPDATE last_key SET id = :target, name = :name WHERE id = :id"
+                        if (id in expected && target != id && target in expected) {
+                            assertFailsWith<DatabaseException> { db.execute(sql, params) }
+                        } else {
+                            assertEquals(if (id in expected) 1 else 0, db.execute(sql, params))
+                            if (id in expected) {
+                                expected.remove(id)
+                                expected[target] = name
+                            }
+                        }
+                    }
+                    2 -> {
+                        assertEquals(if (id in expected) 1 else 0,
+                            db.execute("UPDATE last_key SET name = :name WHERE id = :id", mapOf("name" to name, "id" to id)))
+                        if (id in expected) expected[id] = name
+                    }
+                    3 -> assertEquals(if (expected.remove(id) != null) 1 else 0,
+                        db.execute("DELETE FROM last_key WHERE id = :id", mapOf("id" to id)))
+                    4 -> if (expected.size > 1) {
+                        assertFailsWith<DatabaseException> { db.execute("UPDATE last_key SET id = :id", mapOf("id" to target)) }
+                    } else {
+                        assertEquals(expected.size, db.execute("UPDATE last_key SET id = :id", mapOf("id" to target)))
+                        if (expected.isNotEmpty()) {
+                            val value = expected.values.single()
+                            expected.clear()
+                            expected[target] = value
+                        }
+                    }
+                }
+                val actual = db.query("SELECT * FROM last_key").associate { it.getInt("id") to it.getString("name") }
+                assertEquals(expected, actual, "step $step")
+            }
+        }
+    }
+
 }

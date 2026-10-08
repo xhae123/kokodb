@@ -20,9 +20,11 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
             val values = resolveRow(table, statement.values, params)
-            val rows = table.rows + listOf(values)
-            validateKeys(table, rows.asSequence())
-            table.publishRows(rows)
+            val key = table.columns.indexOfFirst { it.primaryKey }
+            if (key >= 0 && table.rows.any { it[key] == values[key] }) {
+                throw DatabaseException("Duplicate primary key for column '${table.columns[key].name}'")
+            }
+            table.publishRows(table.rows + listOf(values))
             1
         }
         is Statement.Update -> {
@@ -44,7 +46,10 @@ internal class Executor(private val catalog: Catalog) {
                     row.mapIndexed { index, value -> assignments[index] ?: value }
                 } else row
             }
-            validateKeys(table, rows.asSequence())
+            // Unchanged keys retain the uniqueness invariant of the committed row snapshot.
+            if (table.columns.indices.any { table.columns[it].primaryKey && it in assignments }) {
+                validateKeys(table, rows.asSequence())
+            }
             table.publishRows(rows)
             affected
         }
