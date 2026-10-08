@@ -49,7 +49,7 @@ public final class Benchmark {
                 Database db = empty();
                 final Database target = db;
                 measure("insert", size, round, size, i -> {
-                    if (target.execute("INSERT INTO bench VALUES (:id, :name)",
+                    if (target.invoke("INSERT INTO bench VALUES (:id, :name)",
                         Map.of("id", i, "name", "row" + i)) != 1) throw new AssertionError("INSERT count");
                 });
                 Map<String, Object> key = Map.of("id", size / 2);
@@ -64,7 +64,7 @@ public final class Benchmark {
                         Map.of("id", size + 1)).isEmpty()) throw new AssertionError("SELECT miss");
                 });
                 measure("update_one", size, round, 50, i -> {
-                    if (target.execute("UPDATE bench SET name = :name WHERE id = :id",
+                    if (target.invoke("UPDATE bench SET name = :name WHERE id = :id",
                         Map.of("name", "updated" + i, "id", size / 2)) != 1) {
                         throw new AssertionError("UPDATE count");
                     }
@@ -72,13 +72,13 @@ public final class Benchmark {
                 measure("update_key_collision", size, round, 20, i -> {
                     boolean rejected = false;
                     try {
-                        target.execute("UPDATE bench SET id = 1 WHERE id = 0", Map.of());
+                        target.invoke("UPDATE bench SET id = 1 WHERE id = 0", Map.of());
                     } catch (DatabaseException expected) { rejected = true; }
                     if (!rejected) throw new AssertionError("Missing key collision");
                 });
                 int deletes = Math.min(20, size);
                 measure("delete_one", size, round, deletes, i -> {
-                    if (target.execute("DELETE FROM bench WHERE id = :id", Map.of("id", i)) != 1) {
+                    if (target.invoke("DELETE FROM bench WHERE id = :id", Map.of("id", i)) != 1) {
                         throw new AssertionError("DELETE count");
                     }
                 });
@@ -91,14 +91,14 @@ public final class Benchmark {
 
     private static Database empty() {
         Database db = Database.Companion.inMemory(Benchmark.class.getClassLoader());
-        db.execute("CREATE TABLE bench (id INT PRIMARY KEY, name TEXT)", Map.of());
+        db.invoke("CREATE TABLE bench (id INT PRIMARY KEY, name TEXT)", Map.of());
         return db;
     }
 
     private static Database fixture(int size) {
         Database db = empty();
         for (int i = 0; i < size; i++) {
-            db.execute("INSERT INTO bench VALUES (:id, :name)", Map.of("id", i, "name", "row" + i));
+            db.invoke("INSERT INTO bench VALUES (:id, :name)", Map.of("id", i, "name", "row" + i));
         }
         return db;
     }

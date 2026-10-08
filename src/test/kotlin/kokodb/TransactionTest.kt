@@ -10,9 +10,9 @@ import kotlin.test.assertTrue
 
 class TransactionTest {
     private fun database(): Database = Database.inMemory().also {
-        it.execute("CREATE TABLE balances (id INT PRIMARY KEY, amount INT)")
-        it.execute("INSERT INTO balances VALUES (1, 100)")
-        it.execute("INSERT INTO balances VALUES (2, 100)")
+        it("CREATE TABLE balances (id INT PRIMARY KEY, amount INT)")
+        it("INSERT INTO balances VALUES (1, 100)")
+        it("INSERT INTO balances VALUES (2, 100)")
     }
 
     private fun balances(db: Database): Map<Int, Int> = db.query("SELECT * FROM balances")
@@ -23,10 +23,10 @@ class TransactionTest {
         val db = database()
         val before = db.query("SELECT * FROM balances WHERE id = 1").single()
         val result = db.transaction {
-            execute("UPDATE balances SET amount = 50 WHERE id = 1")
-            execute("UPDATE balances SET amount = 150 WHERE id = 2")
-            execute("CREATE TABLE audit (text TEXT)")
-            execute("INSERT INTO audit VALUES ('transfer')")
+            this("UPDATE balances SET amount = 50 WHERE id = 1")
+            this("UPDATE balances SET amount = 150 WHERE id = 2")
+            this("CREATE TABLE audit (text TEXT)")
+            this("INSERT INTO audit VALUES ('transfer')")
             assertEquals(50, db.query("SELECT amount FROM balances WHERE id = 1").single().getInt("amount"))
             queryRows("SELECT * FROM audit").single().getString("text")
         }
@@ -39,21 +39,21 @@ class TransactionTest {
     @Test
     fun `callback exceptions roll back all rows and schemas`() {
         val db = database()
-        db.execute("CREATE TABLE audit (text TEXT)")
+        db("CREATE TABLE audit (text TEXT)")
         val error = IllegalStateException("callback failed")
         assertSame(error, assertFailsWith<IllegalStateException> {
             db.transaction {
-                execute("DELETE FROM balances WHERE id = 1")
-                execute("UPDATE balances SET amount = 200")
-                execute("INSERT INTO audit VALUES ('Pending')")
-                execute("CREATE TABLE temporary (text TEXT)")
+                this("DELETE FROM balances WHERE id = 1")
+                this("UPDATE balances SET amount = 200")
+                this("INSERT INTO audit VALUES ('Pending')")
+                this("CREATE TABLE temporary (text TEXT)")
                 throw error
             }
         })
         assertEquals(mapOf(1 to 100, 2 to 100), balances(db))
         assertTrue(db.query("SELECT * FROM audit").isEmpty())
         assertFailsWith<DatabaseException> { db.query("SELECT * FROM temporary") }
-        db.transaction { execute("INSERT INTO balances VALUES (3, 100)") }
+        db.transaction { this("INSERT INTO balances VALUES (3, 100)") }
         assertEquals(3, balances(db).size)
     }
 
@@ -63,8 +63,8 @@ class TransactionTest {
         var original: DatabaseException? = null
         val aborted = assertFailsWith<DatabaseException> {
             db.transaction {
-                execute("UPDATE balances SET amount = 50 WHERE id = 1")
-                original = assertFailsWith { execute("UPDATE balances SET id = 1 WHERE id = 2") }
+                this("UPDATE balances SET amount = 50 WHERE id = 1")
+                original = assertFailsWith { this("UPDATE balances SET id = 1 WHERE id = 2") }
                 assertFailsWith<DatabaseException> { queryRows("SELECT * FROM balances") }
             }
         }
@@ -75,14 +75,14 @@ class TransactionTest {
     @Test
     fun `syntax and model mapping errors caught by the callback also abort`() {
         for (operation in listOf<Transaction.() -> Unit>(
-            { execute("UPDATE balances SET") },
+            { this("UPDATE balances SET") },
             { query<SharedUser>("SELECT * FROM balances") },
             { query<SharedUser>("SELECT name FROM shared_users") },
         )) {
             val db = database()
             assertFailsWith<DatabaseException> {
                 db.transaction {
-                    execute("DELETE FROM balances")
+                    this("DELETE FROM balances")
                     assertFailsWith<DatabaseException> { operation() }
                 }
             }
@@ -94,9 +94,9 @@ class TransactionTest {
     fun `typed queries see own writes while returned models remain detached`() {
         val db = Database.inMemory()
         val result = db.transaction {
-            execute("INSERT INTO shared_users VALUES (1, 'First')")
+            this("INSERT INTO shared_users VALUES (1, 'First')")
             val snapshot = query<SharedUser>("SELECT * FROM shared_users")
-            execute("UPDATE shared_users SET name = 'Second' WHERE id = 1")
+            this("UPDATE shared_users SET name = 'Second' WHERE id = 1")
             assertEquals(listOf(SharedUser(1, "Second")), query<SharedUser>("SELECT * FROM shared_users"))
             snapshot
         }
@@ -109,8 +109,8 @@ class TransactionTest {
         val db = database()
         assertFailsWith<DatabaseException> {
             db.transaction {
-                execute("DELETE FROM balances")
-                assertFailsWith<DatabaseException> { db.transaction { execute("DELETE FROM balances") } }
+                this("DELETE FROM balances")
+                assertFailsWith<DatabaseException> { db.transaction { this("DELETE FROM balances") } }
             }
         }
         assertEquals(2, balances(db).size)
@@ -122,10 +122,10 @@ class TransactionTest {
         lateinit var captured: Transaction
         db.transaction { captured = this }
         assertTrue(captured.state.catalog.entries().isEmpty())
-        assertFailsWith<DatabaseException> { captured.execute("DELETE FROM balances") }
+        assertFailsWith<DatabaseException> { captured("DELETE FROM balances") }
         db.transaction {
-            assertFailsWith<DatabaseException> { captured.execute("DELETE FROM balances") }
-            execute("UPDATE balances SET amount = 150 WHERE id = 1")
+            assertFailsWith<DatabaseException> { captured("DELETE FROM balances") }
+            this("UPDATE balances SET amount = 150 WHERE id = 1")
         }
         assertEquals(mapOf(1 to 150, 2 to 100), balances(db))
         assertFailsWith<IllegalStateException> { db.transaction { captured = this; error("rollback") } }
@@ -140,10 +140,10 @@ class TransactionTest {
             db.transaction {
                 val scope = this
                 workers.submit {
-                    assertFailsWith<DatabaseException> { scope.execute("DELETE FROM balances") }
+                    assertFailsWith<DatabaseException> { scope("DELETE FROM balances") }
                     assertFailsWith<DatabaseException> { db.query("SELECT * FROM balances") }
                 }.get(5, TimeUnit.SECONDS)
-                execute("UPDATE balances SET amount = 150 WHERE id = 1")
+                this("UPDATE balances SET amount = 150 WHERE id = 1")
             }
             assertEquals(mapOf(1 to 150, 2 to 100), balances(db))
         } finally {
@@ -154,7 +154,7 @@ class TransactionTest {
     @Test
     fun `empty transactions preserve data and successful no match counts`() {
         val db = database()
-        assertEquals(0, db.transaction { execute("UPDATE balances SET amount = 100 WHERE id = 99") })
+        assertEquals(0, db.transaction { this("UPDATE balances SET amount = 100 WHERE id = 99") })
         assertTrue(db.transaction { queryRows("SELECT * FROM balances WHERE id = 99").isEmpty() })
         assertEquals(mapOf(1 to 100, 2 to 100), balances(db))
     }

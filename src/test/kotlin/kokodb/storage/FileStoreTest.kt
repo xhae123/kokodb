@@ -30,22 +30,22 @@ class FileStoreTest {
 
     private fun initialize() {
         Database.open(path).use { db ->
-            db.execute("CREATE TABLE records (id INT PRIMARY KEY, name TEXT)")
-            db.execute("INSERT INTO records VALUES (1, 'Original')")
+            db("CREATE TABLE records (id INT PRIMARY KEY, name TEXT)")
+            db("INSERT INTO records VALUES (1, 'Original')")
         }
     }
 
     @Test
     fun `commits survive close and reopen without requiring a checkpoint`() {
         Database.open(path).use { db ->
-            db.execute("INSERT INTO durable_people VALUES (1, '한글 😀')")
+            db("INSERT INTO durable_people VALUES (1, '한글 😀')")
             db.transaction {
-                execute("CREATE TABLE audit (name TEXT)")
-                execute("INSERT INTO audit VALUES ('created')")
-                execute("UPDATE durable_people SET name = 'Updated' WHERE id = 1")
+                this("CREATE TABLE audit (name TEXT)")
+                this("INSERT INTO audit VALUES ('created')")
+                this("UPDATE durable_people SET name = 'Updated' WHERE id = 1")
             }
             assertFailsWith<IllegalStateException> {
-                db.transaction { execute("DELETE FROM durable_people"); error("discard") }
+                db.transaction { this("DELETE FROM durable_people"); error("discard") }
             }
         }
         Database.open(path).use { db ->
@@ -61,7 +61,7 @@ class FileStoreTest {
             assertTrue(Files.size(wal) > StorageCodec.WAL_HEADER)
             db.checkpoint()
             assertEquals(StorageCodec.WAL_HEADER.toLong(), Files.size(wal))
-            db.execute("UPDATE records SET name = 'After' WHERE id = 1")
+            db("UPDATE records SET name = 'After' WHERE id = 1")
         }
         Database.open(path).use { db -> assertEquals("After", db.query("SELECT * FROM records").single().getString("name")) }
     }
@@ -71,13 +71,13 @@ class FileStoreTest {
         initialize()
         Database.open(path).use { db ->
             val before = Files.size(wal)
-            assertEquals(1, db.execute("UPDATE records SET name = 'Original' WHERE id = 1"))
-            assertEquals(0, db.execute("DELETE FROM records WHERE id = 99"))
+            assertEquals(1, db("UPDATE records SET name = 'Original' WHERE id = 1"))
+            assertEquals(0, db("DELETE FROM records WHERE id = 99"))
             db.transaction {
-                execute("UPDATE records SET name = 'Temporary' WHERE id = 1")
-                execute("UPDATE records SET name = 'Original' WHERE id = 1")
+                this("UPDATE records SET name = 'Temporary' WHERE id = 1")
+                this("UPDATE records SET name = 'Original' WHERE id = 1")
             }
-            assertFailsWith<IllegalArgumentException> { db.transaction { execute("DELETE FROM records"); throw IllegalArgumentException() } }
+            assertFailsWith<IllegalArgumentException> { db.transaction { this("DELETE FROM records"); throw IllegalArgumentException() } }
             assertEquals(before, Files.size(wal))
         }
     }
@@ -95,14 +95,14 @@ class FileStoreTest {
         }
         Database.open(path, loader, io).use { db ->
             io.armed = true
-            assertFailsWith<CommitOutcomeUnknownException> { db.execute("UPDATE records SET name = 'Suspect' WHERE id = 1") }
+            assertFailsWith<CommitOutcomeUnknownException> { db("UPDATE records SET name = 'Suspect' WHERE id = 1") }
             assertFailsWith<DatabaseException> { db.query("SELECT * FROM records") }
-            assertFailsWith<DatabaseException> { db.execute("DELETE FROM records") }
+            assertFailsWith<DatabaseException> { db("DELETE FROM records") }
             assertFailsWith<DatabaseException> { db.checkpoint() }
         }
         Database.open(path).use { db ->
             assertEquals("Original", db.query("SELECT * FROM records").single().getString("name"))
-            db.execute("UPDATE records SET name = 'Recovered' WHERE id = 1")
+            db("UPDATE records SET name = 'Recovered' WHERE id = 1")
         }
         Database.open(path).use { db -> assertEquals("Recovered", db.query("SELECT * FROM records").single().getString("name")) }
     }
@@ -119,7 +119,7 @@ class FileStoreTest {
         }
         Database.open(path, loader, io).use { db ->
             io.armed = true
-            assertFailsWith<CommitOutcomeUnknownException> { db.execute("UPDATE records SET name = 'Durable' WHERE id = 1") }
+            assertFailsWith<CommitOutcomeUnknownException> { db("UPDATE records SET name = 'Durable' WHERE id = 1") }
             assertFailsWith<DatabaseException> { db.query("SELECT * FROM records") }
         }
         Database.open(path).use { db -> assertEquals("Durable", db.query("SELECT * FROM records").single().getString("name")) }
@@ -136,9 +136,9 @@ class FileStoreTest {
         }
         Database.open(path, loader, io).use { db ->
             val before = Files.size(wal)
-            assertFailsWith<DatabaseException> { db.execute("UPDATE records SET name = :name", mapOf("name" to "\ud800")) }
+            assertFailsWith<DatabaseException> { db("UPDATE records SET name = :name", mapOf("name" to "\ud800")) }
             io.armed = true
-            assertFailsWith<IllegalStateException> { db.execute("DELETE FROM records") }
+            assertFailsWith<IllegalStateException> { db("DELETE FROM records") }
             assertEquals(before, Files.size(wal))
             assertEquals("Original", db.query("SELECT * FROM records").single().getString("name"))
         }
@@ -201,7 +201,7 @@ class FileStoreTest {
                 if (name == "META-INF/services/kokodb.mapping.ModelProvider") java.util.Collections.emptyEnumeration()
                 else super.getResources(name)
         }
-        Database.open(path, rawLoader).use { it.execute("CREATE TABLE durable_people (id INT)") }
+        Database.open(path, rawLoader).use { it("CREATE TABLE durable_people (id INT)") }
         val before = Files.readAllBytes(wal)
         assertFailsWith<DatabaseException> { Database.open(path) }
         assertContentEquals(before, Files.readAllBytes(wal))
@@ -219,7 +219,7 @@ class FileStoreTest {
                 }
             }
             Database.open(target, loader, io).use { db ->
-                db.execute("INSERT INTO durable_people VALUES (1, 'Acknowledged')")
+                db("INSERT INTO durable_people VALUES (1, 'Acknowledged')")
                 io.armed = true
                 assertFailsWith<DatabaseException> { db.checkpoint() }
                 assertFailsWith<DatabaseException> { db.query("SELECT * FROM durable_people") }
@@ -255,7 +255,7 @@ class FileStoreTest {
         KoKoDB.close()
         try {
             KoKoDB.open(path)
-            KoKoDB.execute("INSERT INTO durable_people VALUES (1, 'Shared')")
+            KoKoDB("INSERT INTO durable_people VALUES (1, 'Shared')")
             assertFailsWith<DatabaseException> { KoKoDB.open(path) }
             assertFailsWith<DatabaseException> { KoKoDB.transaction { KoKoDB.checkpoint() } }
             KoKoDB.close()

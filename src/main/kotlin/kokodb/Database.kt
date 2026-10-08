@@ -37,7 +37,7 @@ class Database private constructor(classLoader: ClassLoader, private val store: 
                 if (!tables.add(adapter.tableName)) throw DatabaseException("Duplicate generated table '${adapter.tableName}'")
                 val expected = schema(adapter)
                 val existing = pending.catalog.entries()[adapter.tableName]
-                if (existing == null) pending.executor.execute(Statement.CreateTable(adapter.tableName, expected), emptyMap())
+                if (existing == null) pending.executor.write(Statement.CreateTable(adapter.tableName, expected), emptyMap())
                 else if (existing.columns != expected) throw DatabaseException("Generated model does not match stored schema '${adapter.tableName}'")
             }
         }
@@ -54,8 +54,8 @@ class Database private constructor(classLoader: ClassLoader, private val store: 
     }
 
     /** Executes one write statement. Returns 0 for CREATE TABLE and matched row counts for INSERT/UPDATE/DELETE. */
-    fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
-        withExecutor(write = true) { it.execute(Parser(sql).parse(), params) }
+    operator fun invoke(sql: String, params: Map<String, Any?> = emptyMap()): Int =
+        withExecutor(write = true) { it.write(Parser(sql).parse(), params) }
 
     /** Executes one SELECT and returns detached rows with no guaranteed order. */
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =
@@ -68,7 +68,7 @@ class Database private constructor(classLoader: ClassLoader, private val store: 
         params: Map<String, Any?> = emptyMap(),
     ): List<M> = withExecutor { executor ->
         val statement = Parser(sql).parse() as? Statement.Select
-            ?: throw DatabaseException("Use execute() for statements other than SELECT")
+            ?: throw DatabaseException("Use the database call for write statements")
         val adapter = adapter(modelClass)
         if (statement.table != adapter.tableName) {
             throw DatabaseException("SELECT source table does not match model '${modelClass.name}'")

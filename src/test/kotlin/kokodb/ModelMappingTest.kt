@@ -22,7 +22,7 @@ class ModelMappingTest {
     @Test
     fun `generated mapping uses schema order independently of SELECT column order`() {
         Database.inMemory().use { db ->
-            db.execute("INSERT INTO ordered_models VALUES ('Original', 7)")
+            db("INSERT INTO ordered_models VALUES ('Original', 7)")
             val sql = "SELECT ID, DISPLAYNAME FROM ORDERED_MODELS WHERE id = :id"
             val first = db.queryModels(OrderedModel::class.java, sql, mapOf("id" to 7)).single()
             assertEquals(OrderedModel("Original", 7), first)
@@ -36,11 +36,11 @@ class ModelMappingTest {
     fun `generated ordinal mapping preserves model values after file recovery and later writes`() {
         val path = directory.resolve("mapping.koko")
         Database.open(path).use { db ->
-            db.execute("INSERT INTO ordered_models VALUES (:name, :id)", mapOf("name" to "Unicode 🙂", "id" to Int.MIN_VALUE))
+            db("INSERT INTO ordered_models VALUES (:name, :id)", mapOf("name" to "Unicode 🙂", "id" to Int.MIN_VALUE))
         }
         val snapshot = Database.open(path).use { db ->
             val models = db.queryModels(OrderedModel::class.java, "SELECT id, displayname FROM ordered_models")
-            db.execute("UPDATE ordered_models SET displayname = 'Later'")
+            db("UPDATE ordered_models SET displayname = 'Later'")
             models
         }
         assertEquals(listOf(OrderedModel("Unicode 🙂", Int.MIN_VALUE)), snapshot)
@@ -50,8 +50,8 @@ class ModelMappingTest {
     }
 
     private fun executor(): Executor = Executor(Catalog()).also {
-        it.execute(Parser("CREATE TABLE ordered_models (displayname TEXT, id INT PRIMARY KEY)").parse(), emptyMap())
-        it.execute(Parser("INSERT INTO ordered_models VALUES ('Original', 7)").parse(), emptyMap())
+        it.write(Parser("CREATE TABLE ordered_models (displayname TEXT, id INT PRIMARY KEY)").parse(), emptyMap())
+        it.write(Parser("INSERT INTO ordered_models VALUES ('Original', 7)").parse(), emptyMap())
     }
 
     private abstract class Adapter<M : Any> : ModelAdapter<M> {
@@ -67,7 +67,7 @@ class ModelMappingTest {
             override fun read(row: Row) = row
         }
         val row = executor.queryModels(Parser("SELECT id, displayname FROM ordered_models").parse(), emptyMap(), adapter).single()
-        executor.execute(Parser("DELETE FROM ordered_models").parse(), emptyMap())
+        executor.write(Parser("DELETE FROM ordered_models").parse(), emptyMap())
         assertEquals(7, row.getInt("ID"))
         assertEquals("Original", row.getString("displayname"))
     }

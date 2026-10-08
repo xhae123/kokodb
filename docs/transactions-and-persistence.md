@@ -4,7 +4,7 @@ Status: implemented development alpha. Memory SQL CRUD, synchronous transactions
 
 ## Goal and initial scope
 
-- Keep `KoKoDB<Model>(sql, params)` as the primary SELECT API and `execute()` as the write API.
+- Keep `KoKoDB<Model>(sql, params)` as the primary SELECT API and `KoKoDB(sql, params)` as the write API.
 - Support one database owner and serialized transactions, on the gated local filesystem types, subject to file and directory synchronization semantics.
 - Keep the complete working catalog in memory. Use copy-on-write table snapshots rather than introducing pages, MVCC, or an optimizer in the first durable implementation.
 - Guarantee that an acknowledged persistent commit survives restart under the supported filesystem/device synchronization assumptions.
@@ -18,9 +18,9 @@ Implemented memory API:
 ```kotlin
 KoKoDB.openInMemory()
 KoKoDB.transaction {
-    execute("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Koko", "id" to 1))
-    execute("DELETE FROM sessions WHERE user_id = :id", mapOf("id" to 1))
-    val users = query<User>("SELECT * FROM users WHERE id = :id", mapOf("id" to 1))
+    KoKoDB("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Koko", "id" to 1))
+    KoKoDB("DELETE FROM sessions WHERE user_id = :id", mapOf("id" to 1))
+    val users = KoKoDB<User>("SELECT * FROM users WHERE id = :id", mapOf("id" to 1))
 }
 ```
 

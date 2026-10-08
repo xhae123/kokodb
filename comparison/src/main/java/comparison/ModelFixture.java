@@ -23,7 +23,7 @@ final class ModelFixture implements AutoCloseable {
             database = Database.Companion.inMemory(ModelFixture.class.getClassLoader());
             database.transaction(tx -> {
                 for (int i = 0; i < rows; i++) {
-                    tx.execute("INSERT INTO benchmark_users VALUES (:id, :name)", Map.of("id", i, "name", name(i)));
+                    tx.invoke("INSERT INTO benchmark_users VALUES (:id, :name)", Map.of("id", i, "name", name(i)));
                 }
                 return Unit.INSTANCE;
             });

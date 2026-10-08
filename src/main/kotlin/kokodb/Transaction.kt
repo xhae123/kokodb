@@ -16,9 +16,10 @@ class Transaction internal constructor(private val database: Database, state: Da
     internal var failure: Throwable? = null
         private set
 
-    fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int {
+    /** Executes one write in this scope and returns its matched row count; CREATE TABLE returns 0. */
+    operator fun invoke(sql: String, params: Map<String, Any?> = emptyMap()): Int {
         checkAccess()
-        return database.execute(sql, params)
+        return database(sql, params)
     }
 
     /** Runs typed SELECT against the transaction's own pending writes. */

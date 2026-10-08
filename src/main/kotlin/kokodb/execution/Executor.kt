@@ -14,7 +14,7 @@ import kokodb.storage.Table
 import kokodb.storage.Value
 
 internal class Executor(private val catalog: Catalog) {
-    fun execute(statement: Statement, params: Map<String, Any?>): Int = when (statement) {
+    fun write(statement: Statement, params: Map<String, Any?>): Int = when (statement) {
         is Statement.CreateTable -> {
             catalog.create(statement.table, statement.columns)
             0
@@ -91,7 +91,7 @@ internal class Executor(private val catalog: Catalog) {
     }
 
     private fun select(statement: Statement, params: Map<String, Any?>): Selection {
-        if (statement !is Statement.Select) throw DatabaseException("Use execute() for statements other than SELECT")
+        if (statement !is Statement.Select) throw DatabaseException("Use the database call for write statements")
         val table = catalog.table(statement.table)
         validateSchema(table, statement.expectedSchema)
         val indices = when (val projection = statement.projection) {

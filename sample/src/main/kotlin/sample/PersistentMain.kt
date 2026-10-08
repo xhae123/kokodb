@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
     try {
         val users = KoKoDB<User>("SELECT * FROM users WHERE id = 1")
         if (users.isEmpty()) {
-            KoKoDB.transaction { execute("INSERT INTO users VALUES (1, 'Persisted')") }
+            KoKoDB.transaction { KoKoDB("INSERT INTO users VALUES (1, 'Persisted')") }
         }
         check(KoKoDB<User>("SELECT * FROM users WHERE id = 1") == listOf(User(1, "Persisted")))
         println("Restored: ${KoKoDB<User>("SELECT * FROM users")}")

@@ -8,11 +8,11 @@ import kotlin.test.assertTrue
 
 class SqlMutationTest {
     private fun users(empty: Boolean = false): Database = Database.inMemory().also { db ->
-        db.execute("CREATE TABLE mutation_users (id INT PRIMARY KEY, name TEXT)")
+        db("CREATE TABLE mutation_users (id INT PRIMARY KEY, name TEXT)")
         if (!empty) {
-            db.execute("INSERT INTO mutation_users VALUES (1, 'Same')")
-            db.execute("INSERT INTO mutation_users VALUES (2, 'Same')")
-            db.execute("INSERT INTO mutation_users VALUES (3, 'Other')")
+            db("INSERT INTO mutation_users VALUES (1, 'Same')")
+            db("INSERT INTO mutation_users VALUES (2, 'Same')")
+            db("INSERT INTO mutation_users VALUES (3, 'Other')")
         }
     }
 
@@ -22,38 +22,38 @@ class SqlMutationTest {
     @Test
     fun `UPDATE changes only assigned columns in matching rows`() {
         val db = users()
-        assertEquals(2, db.execute("UPDATE mutation_users SET name = :name WHERE name = :old", mapOf("name" to "Changed", "old" to "Same")))
+        assertEquals(2, db("UPDATE mutation_users SET name = :name WHERE name = :old", mapOf("name" to "Changed", "old" to "Same")))
         assertEquals(mapOf(1 to "Changed", 2 to "Changed", 3 to "Other"), rows(db))
-        assertEquals(1, db.execute("UPDATE mutation_users SET id = 4, name = 'Moved' WHERE id = 3"))
+        assertEquals(1, db("UPDATE mutation_users SET id = 4, name = 'Moved' WHERE id = 3"))
         assertEquals(mapOf(1 to "Changed", 2 to "Changed", 4 to "Moved"), rows(db))
     }
 
     @Test
     fun `unconditional UPDATE and DELETE affect all rows`() {
         val db = users()
-        assertEquals(3, db.execute("uPdAtE MUTATION_USERS sEt NAME = 'All';"))
+        assertEquals(3, db("uPdAtE MUTATION_USERS sEt NAME = 'All';"))
         assertEquals(setOf("All"), rows(db).values.toSet())
-        assertEquals(3, db.execute("dElEtE fRoM MUTATION_USERS;"))
+        assertEquals(3, db("dElEtE fRoM MUTATION_USERS;"))
         assertTrue(rows(db).isEmpty())
-        assertEquals(0, db.execute("UPDATE mutation_users SET name = 'Empty'"))
-        assertEquals(0, db.execute("DELETE FROM mutation_users"))
+        assertEquals(0, db("UPDATE mutation_users SET name = 'Empty'"))
+        assertEquals(0, db("DELETE FROM mutation_users"))
     }
 
     @Test
     fun `affected counts include matches whose values do not change`() {
         val db = users()
-        assertEquals(2, db.execute("UPDATE mutation_users SET name = 'Same' WHERE name = 'Same'"))
-        assertEquals(0, db.execute("UPDATE mutation_users SET name = 'Absent' WHERE id = 99"))
-        assertEquals(0, db.execute("DELETE FROM mutation_users WHERE id = 99"))
+        assertEquals(2, db("UPDATE mutation_users SET name = 'Same' WHERE name = 'Same'"))
+        assertEquals(0, db("UPDATE mutation_users SET name = 'Absent' WHERE id = 99"))
+        assertEquals(0, db("DELETE FROM mutation_users WHERE id = 99"))
         assertEquals(3, rows(db).size)
     }
 
     @Test
     fun `DELETE filters by bound values and preserves other rows`() {
         val db = users()
-        assertEquals(2, db.execute("DELETE FROM mutation_users WHERE name = :name", mapOf("name" to "Same")))
+        assertEquals(2, db("DELETE FROM mutation_users WHERE name = :name", mapOf("name" to "Same")))
         assertEquals(mapOf(3 to "Other"), rows(db))
-        assertEquals(1, db.execute("DELETE FROM mutation_users WHERE id = 3"))
+        assertEquals(1, db("DELETE FROM mutation_users WHERE id = 3"))
         assertTrue(rows(db).isEmpty())
     }
 
@@ -70,7 +70,7 @@ class SqlMutationTest {
             "UPDATE mutation_users SET name = 'Changed' WHERE id = 'Wrong'",
             "UPDATE mutation_users SET name = 'Changed' WHERE id = :missing",
         )) {
-            assertFailsWith<DatabaseException>(sql) { db.execute(sql) }
+            assertFailsWith<DatabaseException>(sql) { db(sql) }
             assertEquals(original, rows(db), sql)
         }
     }
@@ -84,10 +84,10 @@ class SqlMutationTest {
             "UPDATE mutation_users SET name = 'Changed', id = 4 WHERE name = 'Same'",
             "UPDATE mutation_users SET name = 'Changed', id = 1",
         )) {
-            assertFailsWith<DatabaseException>(sql) { db.execute(sql) }
+            assertFailsWith<DatabaseException>(sql) { db(sql) }
             assertEquals(original, rows(db))
         }
-        db.execute("UPDATE mutation_users SET id = 4 WHERE id = 1")
+        db("UPDATE mutation_users SET id = 4 WHERE id = 1")
         assertEquals(setOf(2, 3, 4), rows(db).keys)
     }
 
@@ -100,7 +100,7 @@ class SqlMutationTest {
             "DELETE FROM mutation_users WHERE id = 'Wrong'",
             "DELETE FROM mutation_users WHERE id = :missing",
         )) {
-            assertFailsWith<DatabaseException> { db.execute(sql) }
+            assertFailsWith<DatabaseException> { db(sql) }
             assertEquals(original, rows(db))
         }
     }
@@ -116,10 +116,10 @@ class SqlMutationTest {
             "UPDATE mutation_users SET name = 'Valid' WHERE missing = 1",
             "DELETE FROM mutation_users WHERE missing = 1",
             "DELETE FROM mutation_users WHERE id = :missing",
-        )) assertFailsWith<DatabaseException>(sql) { db.execute(sql) }
+        )) assertFailsWith<DatabaseException>(sql) { db(sql) }
         for (value in listOf(null, 1L, true, "one")) {
-            assertFailsWith<DatabaseException> { db.execute("UPDATE mutation_users SET id = :id", mapOf("id" to value)) }
-            assertFailsWith<DatabaseException> { db.execute("DELETE FROM mutation_users WHERE id = :id", mapOf("id" to value)) }
+            assertFailsWith<DatabaseException> { db("UPDATE mutation_users SET id = :id", mapOf("id" to value)) }
+            assertFailsWith<DatabaseException> { db("DELETE FROM mutation_users WHERE id = :id", mapOf("id" to value)) }
         }
         assertTrue(rows(db).isEmpty())
     }
@@ -134,26 +134,26 @@ class SqlMutationTest {
             "UPDATE mutation_users SET name = 'Changed' WHERE", "DELETE mutation_users",
             "DELETE FROM", "DELETE FROM mutation_users WHERE", "DELETE FROM mutation_users WHERE id > 1",
             "UPDATE mutation_users SET name = name", "DELETE FROM mutation_users; DELETE FROM mutation_users",
-        )) assertFailsWith<SqlSyntaxException>(sql) { db.execute(sql) }
+        )) assertFailsWith<SqlSyntaxException>(sql) { db(sql) }
         for (sql in listOf("UPDATE mutation_users SET name = 'Changed'", "DELETE FROM mutation_users")) {
             assertFailsWith<DatabaseException> { db.query(sql) }
         }
         assertEquals(original, rows(db))
-        assertFailsWith<DatabaseException> { db.execute("UPDATE missing SET name = 'Changed'") }
-        assertFailsWith<DatabaseException> { db.execute("DELETE FROM missing") }
+        assertFailsWith<DatabaseException> { db("UPDATE missing SET name = 'Changed'") }
+        assertFailsWith<DatabaseException> { db("DELETE FROM missing") }
     }
 
     @Test
     fun `string primary keys reject collisions and preserve bound text as data`() {
         val db = Database.inMemory()
-        db.execute("CREATE TABLE text_keys (name TEXT PRIMARY KEY, value INT)")
-        db.execute("INSERT INTO text_keys VALUES ('theme', 1)")
-        db.execute("INSERT INTO text_keys VALUES ('THEME', 2)")
-        assertFailsWith<DatabaseException> { db.execute("UPDATE text_keys SET name = 'theme', value = 9 WHERE name = 'THEME'") }
+        db("CREATE TABLE text_keys (name TEXT PRIMARY KEY, value INT)")
+        db("INSERT INTO text_keys VALUES ('theme', 1)")
+        db("INSERT INTO text_keys VALUES ('THEME', 2)")
+        assertFailsWith<DatabaseException> { db("UPDATE text_keys SET name = 'theme', value = 9 WHERE name = 'THEME'") }
         val payload = "theme'; DELETE FROM text_keys; --"
-        assertEquals(1, db.execute("UPDATE text_keys SET name = :name WHERE name = 'theme'", mapOf("name" to payload)))
+        assertEquals(1, db("UPDATE text_keys SET name = :name WHERE name = 'theme'", mapOf("name" to payload)))
         assertEquals(2, db.query("SELECT * FROM text_keys").size)
-        assertEquals(1, db.execute("DELETE FROM text_keys WHERE name = :name", mapOf("name" to payload)))
+        assertEquals(1, db("DELETE FROM text_keys WHERE name = :name", mapOf("name" to payload)))
         assertEquals("THEME", db.query("SELECT * FROM text_keys").single().getString("name"))
     }
 
@@ -167,24 +167,24 @@ class SqlMutationTest {
             val name = "name${random.nextInt(5)}"
             when (random.nextInt(5)) {
                 0 -> if (id in expected) {
-                    assertFailsWith<DatabaseException> { db.execute("INSERT INTO mutation_users VALUES (:id, :name)", mapOf("id" to id, "name" to name)) }
+                    assertFailsWith<DatabaseException> { db("INSERT INTO mutation_users VALUES (:id, :name)", mapOf("id" to id, "name" to name)) }
                 } else {
-                    db.execute("INSERT INTO mutation_users VALUES (:id, :name)", mapOf("id" to id, "name" to name))
+                    db("INSERT INTO mutation_users VALUES (:id, :name)", mapOf("id" to id, "name" to name))
                     expected[id] = name
                 }
                 1 -> {
-                    assertEquals(if (id in expected) 1 else 0, db.execute("UPDATE mutation_users SET name = :name WHERE id = :id", mapOf("id" to id, "name" to name)))
+                    assertEquals(if (id in expected) 1 else 0, db("UPDATE mutation_users SET name = :name WHERE id = :id", mapOf("id" to id, "name" to name)))
                     if (id in expected) expected[id] = name
                 }
-                2 -> assertEquals(if (expected.remove(id) != null) 1 else 0, db.execute("DELETE FROM mutation_users WHERE id = :id", mapOf("id" to id)))
+                2 -> assertEquals(if (expected.remove(id) != null) 1 else 0, db("DELETE FROM mutation_users WHERE id = :id", mapOf("id" to id)))
                 3 -> {
                     val matching = expected.filterValues { it == name }.keys
-                    assertEquals(matching.size, db.execute("UPDATE mutation_users SET name = :new WHERE name = :old", mapOf("new" to "batch$step", "old" to name)))
+                    assertEquals(matching.size, db("UPDATE mutation_users SET name = :new WHERE name = :old", mapOf("new" to "batch$step", "old" to name)))
                     matching.forEach { expected[it] = "batch$step" }
                 }
                 4 -> {
                     val matching = expected.filterValues { it == name }.keys
-                    assertEquals(matching.size, db.execute("DELETE FROM mutation_users WHERE name = :name", mapOf("name" to name)))
+                    assertEquals(matching.size, db("DELETE FROM mutation_users WHERE name = :name", mapOf("name" to name)))
                     matching.forEach { expected.remove(it) }
                 }
             }
@@ -195,9 +195,9 @@ class SqlMutationTest {
     @Test
     fun `tables without a primary key allow duplicates across inserts and updates`() {
         Database.inMemory().use { db ->
-            db.execute("CREATE TABLE duplicates (name TEXT, value INT)")
-            repeat(3) { db.execute("INSERT INTO duplicates VALUES ('Same', 1)") }
-            assertEquals(3, db.execute("UPDATE duplicates SET value = 2"))
+            db("CREATE TABLE duplicates (name TEXT, value INT)")
+            repeat(3) { db("INSERT INTO duplicates VALUES ('Same', 1)") }
+            assertEquals(3, db("UPDATE duplicates SET value = 2"))
             val rows = db.query("SELECT * FROM duplicates")
             assertEquals(3, rows.size)
             assertTrue(rows.all { it.getString("name") == "Same" && it.getInt("value") == 2 })
@@ -207,7 +207,7 @@ class SqlMutationTest {
     @Test
     fun `random key mutations preserve uniqueness when primary key is the last column`() {
         Database.inMemory().use { db ->
-            db.execute("CREATE TABLE last_key (name TEXT, id INT PRIMARY KEY)")
+            db("CREATE TABLE last_key (name TEXT, id INT PRIMARY KEY)")
             val expected = mutableMapOf<Int, String>()
             val random = Random(1921)
             repeat(500) { step ->
@@ -217,19 +217,19 @@ class SqlMutationTest {
                 when (random.nextInt(5)) {
                     0 -> if (id in expected) {
                         assertFailsWith<DatabaseException> {
-                            db.execute("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
+                            db("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
                         }
                     } else {
-                        db.execute("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
+                        db("INSERT INTO last_key VALUES (:name, :id)", mapOf("name" to name, "id" to id))
                         expected[id] = name
                     }
                     1 -> {
                         val params = mapOf("id" to id, "target" to target, "name" to name)
                         val sql = "UPDATE last_key SET id = :target, name = :name WHERE id = :id"
                         if (id in expected && target != id && target in expected) {
-                            assertFailsWith<DatabaseException> { db.execute(sql, params) }
+                            assertFailsWith<DatabaseException> { db(sql, params) }
                         } else {
-                            assertEquals(if (id in expected) 1 else 0, db.execute(sql, params))
+                            assertEquals(if (id in expected) 1 else 0, db(sql, params))
                             if (id in expected) {
                                 expected.remove(id)
                                 expected[target] = name
@@ -238,15 +238,15 @@ class SqlMutationTest {
                     }
                     2 -> {
                         assertEquals(if (id in expected) 1 else 0,
-                            db.execute("UPDATE last_key SET name = :name WHERE id = :id", mapOf("name" to name, "id" to id)))
+                            db("UPDATE last_key SET name = :name WHERE id = :id", mapOf("name" to name, "id" to id)))
                         if (id in expected) expected[id] = name
                     }
                     3 -> assertEquals(if (expected.remove(id) != null) 1 else 0,
-                        db.execute("DELETE FROM last_key WHERE id = :id", mapOf("id" to id)))
+                        db("DELETE FROM last_key WHERE id = :id", mapOf("id" to id)))
                     4 -> if (expected.size > 1) {
-                        assertFailsWith<DatabaseException> { db.execute("UPDATE last_key SET id = :id", mapOf("id" to target)) }
+                        assertFailsWith<DatabaseException> { db("UPDATE last_key SET id = :id", mapOf("id" to target)) }
                     } else {
-                        assertEquals(expected.size, db.execute("UPDATE last_key SET id = :id", mapOf("id" to target)))
+                        assertEquals(expected.size, db("UPDATE last_key SET id = :id", mapOf("id" to target)))
                         if (expected.isNotEmpty()) {
                             val value = expected.values.single()
                             expected.clear()
