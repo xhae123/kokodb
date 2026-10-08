@@ -3,3 +3,4 @@
 .gradle/
 .kotlin/
 build/
+/benchmarks/results/
