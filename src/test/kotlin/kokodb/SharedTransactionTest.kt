@@ -16,7 +16,7 @@ class SharedTransactionTest {
     fun open() {
         KoKoDB.close()
         KoKoDB.openInMemory()
-        KoKoDB.execute("INSERT INTO shared_users VALUES (1, 'Original')")
+        KoKoDB("INSERT INTO shared_users VALUES (1, 'Original')")
     }
 
     @AfterTest
@@ -26,14 +26,26 @@ class SharedTransactionTest {
     fun `global calls on the owner thread participate in the active transaction`() {
         assertFailsWith<IllegalStateException> {
             KoKoDB.transaction {
-                KoKoDB.execute("UPDATE shared_users SET name = 'Pending' WHERE id = 1")
+                KoKoDB("UPDATE shared_users SET name = 'Pending' WHERE id = 1")
                 assertEquals(listOf(SharedUser(1, "Pending")), KoKoDB<SharedUser>("SELECT * FROM shared_users"))
                 error("rollback")
             }
         }
         assertEquals(listOf(SharedUser(1, "Original")), KoKoDB<SharedUser>("SELECT * FROM shared_users"))
-        KoKoDB.transaction { KoKoDB.execute("UPDATE shared_users SET name = 'Committed' WHERE id = 1") }
+        KoKoDB.transaction { KoKoDB("UPDATE shared_users SET name = 'Committed' WHERE id = 1") }
         assertEquals(listOf(SharedUser(1, "Committed")), KoKoDB<SharedUser>("SELECT * FROM shared_users"))
+    }
+
+    @Test
+    fun `caught global write errors prevent earlier invoked writes from committing`() {
+        assertFailsWith<DatabaseException> {
+            KoKoDB.transaction {
+                KoKoDB("UPDATE shared_users SET name = 'Pending' WHERE id = 1")
+                assertFailsWith<DatabaseException> { KoKoDB("INSERT INTO shared_users VALUES (1, 'Duplicate')") }
+                assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("SELECT * FROM shared_users") }
+            }
+        }
+        assertEquals(listOf(SharedUser(1, "Original")), KoKoDB<SharedUser>("SELECT * FROM shared_users"))
     }
 
     @Test
@@ -43,7 +55,7 @@ class SharedTransactionTest {
         )) {
             assertFailsWith<DatabaseException> {
                 KoKoDB.transaction {
-                    execute("DELETE FROM shared_users")
+                    KoKoDB("DELETE FROM shared_users")
                     assertFailsWith<DatabaseException> { operation() }
                 }
             }
@@ -60,10 +72,10 @@ class SharedTransactionTest {
         try {
             val writer = workers.submit {
                 KoKoDB.transaction {
-                    execute("UPDATE shared_users SET name = 'Committed' WHERE id = 1")
+                    KoKoDB("UPDATE shared_users SET name = 'Committed' WHERE id = 1")
                     pending.countDown()
                     assertTrue(release.await(5, TimeUnit.SECONDS))
-                    execute("INSERT INTO shared_users VALUES (2, 'Also committed')")
+                    KoKoDB("INSERT INTO shared_users VALUES (2, 'Also committed')")
                 }
             }
             assertTrue(pending.await(5, TimeUnit.SECONDS))

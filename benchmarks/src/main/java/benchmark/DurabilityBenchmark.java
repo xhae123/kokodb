@@ -50,21 +50,21 @@ public final class DurabilityBenchmark {
         long allocation;
         long allocated;
         try (Database db = open(path)) {
-            db.execute("CREATE TABLE bench (id INT PRIMARY KEY, name TEXT)", Map.of());
+            db.invoke("CREATE TABLE bench (id INT PRIMARY KEY, name TEXT)", Map.of());
             db.checkpoint();
             allocation = allocated();
             long start = System.nanoTime();
             if (mode.equals("batch")) {
                 db.transaction(tx -> {
                     for (int i = 0; i < size; i++) {
-                        if (tx.execute("INSERT INTO bench VALUES (:id, :name)",
+                        if (tx.invoke("INSERT INTO bench VALUES (:id, :name)",
                             Map.of("id", i, "name", "row" + i)) != 1) throw new AssertionError("INSERT count");
                     }
                     return Unit.INSTANCE;
                 });
             } else {
                 for (int i = 0; i < size; i++) {
-                    if (db.execute("INSERT INTO bench VALUES (:id, :name)",
+                    if (db.invoke("INSERT INTO bench VALUES (:id, :name)",
                         Map.of("id", i, "name", "row" + i)) != 1) throw new AssertionError("INSERT count");
                 }
             }

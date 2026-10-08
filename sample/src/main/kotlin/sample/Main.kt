@@ -7,7 +7,7 @@ import kokodb.KoKoDB
 @DbTable("users")
 data class User(@Id val id: Int, val name: String)
 
-fun register(id: Int, name: String): Int = KoKoDB.execute(
+fun register(id: Int, name: String): Int = KoKoDB(
     "INSERT INTO users VALUES (:id, :name)",
     params = mapOf("id" to id, "name" to name),
 )
@@ -25,14 +25,14 @@ fun main() {
         println(users)
         check(KoKoDB<User>("SELECT * FROM users WHERE id = 2").isEmpty())
         KoKoDB.transaction {
-            check(execute(
+            check(KoKoDB(
                 "UPDATE users SET name = :name WHERE id = :id",
                 mapOf("name" to "Updated", "id" to 1),
             ) == 1)
-            check(query<User>("SELECT * FROM users") == listOf(User(1, "Updated")))
+            check(KoKoDB<User>("SELECT * FROM users") == listOf(User(1, "Updated")))
         }
         check(named("Updated") == listOf(User(1, "Updated")))
-        check(KoKoDB.execute("DELETE FROM users WHERE id = :id", mapOf("id" to 1)) == 1)
+        check(KoKoDB("DELETE FROM users WHERE id = :id", mapOf("id" to 1)) == 1)
         check(KoKoDB<User>("SELECT * FROM users").isEmpty())
     } finally {
         KoKoDB.close()

@@ -8,7 +8,7 @@ object KoKoDB {
     private var database: Database? = null
     private var closed = false
 
-    /** Runs SELECT and returns detached models. T is one row's type and requires @DbTable and KSP mapping. */
+    /** Runs SELECT and returns detached models. Supply T explicitly; it requires @DbTable and KSP mapping. */
     inline operator fun <reified T : Any> invoke(
         sql: String,
         params: Map<String, Any?> = emptyMap(),
@@ -22,8 +22,8 @@ object KoKoDB {
     ): List<T> = withDatabase { it.queryModels(modelClass, sql, params) }
 
     /** Executes CREATE TABLE, INSERT, UPDATE, or DELETE and returns the affected row count; creation returns 0. */
-    fun execute(sql: String, params: Map<String, Any?> = emptyMap()): Int =
-        withDatabase { it.execute(sql, params) }
+    operator fun invoke(sql: String, params: Map<String, Any?> = emptyMap()): Int =
+        withDatabase { it(sql, params) }
 
     /** Returns detached SQL rows without requiring a generated result model. */
     fun query(sql: String, params: Map<String, Any?> = emptyMap()): List<Row> =

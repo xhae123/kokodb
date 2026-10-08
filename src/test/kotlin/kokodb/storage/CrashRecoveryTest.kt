@@ -30,13 +30,13 @@ internal object CrashProcess {
             io.armed = true
             if (boundary in listOf(StoreEvent.BEFORE_APPEND, StoreEvent.AFTER_APPEND, StoreEvent.AFTER_WAL_FORCE)) {
                 db.transaction {
-                    execute("UPDATE first SET name = 'New' WHERE id = 1")
-                    execute("UPDATE second SET name = 'New' WHERE id = 1")
+                    this("UPDATE first SET name = 'New' WHERE id = 1")
+                    this("UPDATE second SET name = 'New' WHERE id = 1")
                 }
             } else {
                 db.transaction {
-                    execute("UPDATE first SET name = 'New' WHERE id = 1")
-                    execute("UPDATE second SET name = 'New' WHERE id = 1")
+                    this("UPDATE first SET name = 'New' WHERE id = 1")
+                    this("UPDATE second SET name = 'New' WHERE id = 1")
                 }
                 println("commit acknowledged")
                 db.checkpoint()
@@ -53,9 +53,9 @@ class CrashRecoveryTest {
         Database.open(path).use { db ->
             db.transaction {
                 for (name in listOf("first", "second")) {
-                    execute("CREATE TABLE $name (id INT PRIMARY KEY, name TEXT)")
-                    execute("INSERT INTO $name VALUES (1, 'Old')")
-                    execute("INSERT INTO $name VALUES (2, 'Acknowledged')")
+                    this("CREATE TABLE $name (id INT PRIMARY KEY, name TEXT)")
+                    this("INSERT INTO $name VALUES (1, 'Old')")
+                    this("INSERT INTO $name VALUES (2, 'Acknowledged')")
                 }
             }
         }
@@ -91,7 +91,7 @@ class CrashRecoveryTest {
                 for (name in listOf("first", "second")) {
                     assertEquals("Acknowledged", db.query("SELECT * FROM $name WHERE id = 2").single().getString("name"))
                 }
-                db.execute("INSERT INTO first VALUES (3, 'After recovery')")
+                db("INSERT INTO first VALUES (3, 'After recovery')")
             }
             Database.open(path).use { db -> assertEquals(3, db.query("SELECT * FROM first").size) }
             Files.list(folder).use { files -> assertEquals(0L, files.filter { it.fileName.toString().endsWith(".tmp") }.count()) }
@@ -121,7 +121,7 @@ class CrashRecoveryTest {
             Database.open(path).use { db ->
                 assertEquals("Old", db.query("SELECT * FROM first WHERE id = 1").single().getString("name"))
                 assertEquals(2, db.query("SELECT * FROM first").size)
-                db.execute("INSERT INTO first VALUES (3, 'After torn tail')")
+                db("INSERT INTO first VALUES (3, 'After torn tail')")
             }
             Database.open(path).use { db -> assertEquals(3, db.query("SELECT * FROM first").size) }
         }

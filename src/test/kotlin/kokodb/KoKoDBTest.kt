@@ -32,7 +32,7 @@ class KoKoDBTest {
         KoKoDB.close()
     }
 
-    private fun register(id: Int, name: String) = KoKoDB.execute(
+    private fun register(id: Int, name: String) = KoKoDB(
         "INSERT INTO shared_users VALUES (:id, :name)", mapOf("id" to id, "name" to name)
     )
 
@@ -55,17 +55,17 @@ class KoKoDBTest {
         register(1, "Original")
         register(2, "Other")
         val detached = find(1).single()
-        assertEquals(1, KoKoDB.execute(
+        assertEquals(1, KoKoDB(
             "UPDATE shared_users SET name = :name WHERE id = :id",
             mapOf("name" to "Updated", "id" to 1),
         ))
         assertEquals(listOf(SharedUser(1, "Updated")), find(1))
         assertEquals("Original", detached.name)
         assertFailsWith<DatabaseException> {
-            KoKoDB.execute("UPDATE shared_users SET id = 2, name = 'Rejected' WHERE id = 1")
+            KoKoDB("UPDATE shared_users SET id = 2, name = 'Rejected' WHERE id = 1")
         }
         assertEquals(listOf(SharedUser(1, "Updated")), find(1))
-        assertEquals(1, KoKoDB.execute("DELETE FROM shared_users WHERE id = :id", mapOf("id" to 1)))
+        assertEquals(1, KoKoDB("DELETE FROM shared_users WHERE id = :id", mapOf("id" to 1)))
         assertTrue(find(1).isEmpty())
         assertEquals(listOf(SharedUser(2, "Other")), find(2))
     }
@@ -94,6 +94,7 @@ class KoKoDBTest {
         )) assertFailsWith<DatabaseException> { KoKoDB<SharedUser>(sql) }
         assertFailsWith<DatabaseException> { KoKoDB<Unregistered>("SELECT * FROM shared_users") }
         assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("INSERT INTO shared_users VALUES (1, 'Unexpected')") }
+        assertFailsWith<DatabaseException> { KoKoDB("SELECT * FROM shared_users") }
         assertTrue(KoKoDB<SharedUser>("SELECT * FROM shared_users").isEmpty())
         assertFailsWith<SqlSyntaxException> { KoKoDB<SharedUser>("SELECT FROM") }
     }
@@ -131,8 +132,8 @@ class KoKoDBTest {
 
     @Test
     fun `models without primary keys map SQL results with repeated values`() {
-        KoKoDB.execute("INSERT INTO shared_notes VALUES (1, 'First')")
-        KoKoDB.execute("INSERT INTO shared_notes VALUES (1, 'Second')")
+        KoKoDB("INSERT INTO shared_notes VALUES (1, 'First')")
+        KoKoDB("INSERT INTO shared_notes VALUES (1, 'Second')")
         assertEquals(setOf(SharedNote(1, "First"), SharedNote(1, "Second")),
             KoKoDB<SharedNote>("SELECT text, id FROM shared_notes").toSet())
     }
@@ -167,8 +168,8 @@ class KoKoDBTest {
                 else super.getResources(name)
         }
         KoKoDB.openInMemory(loader)
-        assertEquals(0, KoKoDB.execute("CREATE TABLE shared_settings (name TEXT, value INT)"))
-        KoKoDB.execute("INSERT INTO shared_settings VALUES (:name, :value)", mapOf("name" to "count", "value" to 3))
+        assertEquals(0, KoKoDB("CREATE TABLE shared_settings (name TEXT, value INT)"))
+        KoKoDB("INSERT INTO shared_settings VALUES (:name, :value)", mapOf("name" to "count", "value" to 3))
         assertEquals(3, KoKoDB.query("SELECT value FROM shared_settings").single().getInt("value"))
         assertFailsWith<DatabaseException> { KoKoDB<SharedUser>("SELECT * FROM shared_settings") }
     }
@@ -176,7 +177,7 @@ class KoKoDBTest {
     @Test
     fun `independent databases can execute typed SQL without sharing singleton rows`() {
         val db = Database.inMemory()
-        db.execute("INSERT INTO shared_users VALUES (1, 'Independent')")
+        db("INSERT INTO shared_users VALUES (1, 'Independent')")
         assertEquals(listOf(SharedUser(1, "Independent")), db.queryModels(SharedUser::class.java, "SELECT * FROM shared_users"))
         assertTrue(find(1).isEmpty())
     }
