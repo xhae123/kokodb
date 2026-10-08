@@ -23,6 +23,8 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build :sample:run :benchmarks:run --args=smoke :benchmarks:storageSmoke :comparison:smoke
+      - name: Reject malformed SQL in a Gradle consumer
+        run: python3 compiler-plugin/check_gradle.py
       - name: Recover sample data in a second JVM
         run: |
           python3 - <<'PY'
