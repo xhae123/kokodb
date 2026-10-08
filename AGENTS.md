@@ -6,6 +6,8 @@ Build a lightweight embedded relational database for Kotlin/JVM whose primary qu
 
 Key-value storage and general-purpose object serialization are no longer the product direction. Distinguish implemented capabilities from planned APIs and document storage guarantees explicitly.
 
+Target the deployment and resource cost of relational storage in small Kotlin/JVM applications, including separately packaged native database binaries and oversized infrastructure for modest workloads. Kotlin implementation alone is not evidence of lower cost. Track runtime artifact size, fresh-JVM startup, process RSS, workload allocation, and storage correctness with reproducible measurements. Distinguish JVM overhead from database overhead and compare engines only under equivalent workloads and durability settings.
+
 # Naming and Model Conventions
 
 - Call a Kotlin type mapped to a relational table a model. Use domain names such as `User` and `Order`; do not require `Entity`, `Model`, or `Record` suffixes.

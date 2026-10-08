@@ -6,6 +6,8 @@ KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API 
 
 The goal is a small, easy-to-adopt database with minimal dependencies and low resource overhead. Storage is currently memory-only; disk persistence is not implemented.
 
+The problem we target is the deployment and resource cost of relational storage in small Kotlin/JVM applications. A JVM implementation can avoid separately packaged native database binaries and expose the execution, allocation, and recovery paths directly. That alone does not establish lower memory use or better performance: we measure artifact size, fresh-process startup, process RSS, and workload allocation before making those claims.
+
 ## Getting started
 
 Declare the result model. KSP generates its table schema and mapper; the database discovers the generated definitions and prepares the tables automatically.
@@ -121,6 +123,8 @@ dependencies {
 Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library.
 
 ## Architecture
+
+Reproduce the current resource baseline with the [benchmark guide](benchmarks/README.md). Benchmarks are a separate development module and add no runtime-library dependency.
 
 ```mermaid
 sequenceDiagram
