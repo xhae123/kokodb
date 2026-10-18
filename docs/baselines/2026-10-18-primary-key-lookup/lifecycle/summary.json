@@ -1,0 +1,14 @@
+{
+  "first_scan": {
+    "nanoseconds": 407875.0,
+    "allocated_bytes": 2688.0
+  },
+  "build": {
+    "nanoseconds": 788541.0,
+    "allocated_bytes": 68208.0
+  },
+  "cached": {
+    "nanoseconds": 27792.0,
+    "allocated_bytes": 2656.0
+  }
+}

@@ -8,7 +8,7 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - CRUD supports non-null INT/TEXT columns, one optional caller-supplied primary key, projections and single equality predicates.
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
-- Correctness evidence includes 122 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- Correctness evidence includes 128 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
 - Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-splice runtime baseline is 128.3 KiB; JVM and Kotlin dependencies are separate costs.
 
 See the [storage contract](transactions-and-persistence.md), [memory optimization evidence](baselines/2026-10-08-constraint-validation/README.md), and [durable measurements](baselines/2026-10-08-durable-storage/README.md) for exact scope and limitations.
@@ -24,13 +24,13 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 - Evaluate multiple edit ranges or stable row identities only when measured dispersed-write workloads justify the extra state and complexity.
 - Define checkpoint thresholds after measuring workload growth and failure behavior; retain explicit checkpoints and never reset WAL before the corresponding snapshot is durable.
 
-## Reduce scans while preserving atomic publication
+## Preserve measured lookup gains while reducing mutation costs
 
-The current executor still scans rows and copies replacement lists. Skipping redundant primary-key sets reduced non-key UPDATE allocation by 92.3% at 5,000 rows, but did not change O(N) complexity.
+[Primary-key equality lookups](query-execution.md) now build a compact position cache only after repeated reads of an unchanged sufficiently large snapshot. Forks share a cache only with its matching immutable rows; mutation and recovery retain the original atomicity rules.
 
-- Evaluate a primary-key lookup structure rebuilt from validated stored rows, with transaction-private updates and atomic publication.
-- Verify lookup results against scans after inserts, key moves, deletes, rollbacks, checkpoints and recovery. Detached results must retain their current behavior.
-- Measure lookup/update cost and index memory across sizes; do not trade a small runtime artifact for unmeasured retained heap.
+- Point-query comparisons include hits, misses, and UPDATE-then-read against the prior runtime and H2 prepared statements with direct Kotlin mapping.
+- Row-list replacement, diff detection, and primary-key mutation validation remain O(N). Indexing a read path does not solve those write costs.
+- First-read/index-build latency, large-table cache bounds, and adversarial collision fallback must remain explicit when interpreting warm repeated-read results.
 
 ## Qualify a release using explicit costs and guarantees
 

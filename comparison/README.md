@@ -39,3 +39,15 @@ The runner retains full JMH logs/JSON, iteration observations and confidence int
 - Both engines and the harness are on the measurement classpath. Artifact inventories list them separately; the entire benchmark distribution is not a KoKoDB consumer dependency set.
 - A generated mapper can also be built over JDBC. Any measured difference belongs to these execution paths and contracts, not an assertion that H2 can never serve Kotlin applications efficiently.
 - Compiler SQL validation, offline synchronization and other proposed directions are not implemented by this experiment. A differentiation claim needs reproducible results and a relevant application workload, not just language branding.
+
+## Point queries and mixed reads/writes
+
+```sh
+python3 comparison/measure.py --java "$JAVA_HOME/bin/java" --suite points --output comparison/results/points
+```
+
+The point suite uses 1,000/10,000 rows, cycling hit/miss keys and a separate UPDATE-then-read operation. H2 reuses prepared SELECT/UPDATE statements and maps by column position into the same Kotlin class. KoKoDB uses its ordinary SQL calls. Both are independent sequential memory databases; each update is its own atomic statement. Population and full-content verification are outside timing. Each case uses three forks, three one-second warmups, and three one-second measured iterations with GC allocation profiling.
+
+Use `--runtime /path/to/older-kokodb.jar --engines kokodb` for an API-compatible old runtime with the exact same harness. `--rows 1000` narrows a run; it does not change the result contract. The default `--suite models` retains the full-table benchmark and its original five-iteration settings. `--quick` remains diagnostic only.
+
+`comparison.IndexLifecycleProbe` separately records the first scan, index-building lookup, and cached lookup on a 10,000-row database, with thread allocation and content checks. Run it from the installed comparison classpath. It discards two setup rounds and records three rounds, but its individual timing observations are exploratory and cannot replace forked JMH results or establish a tuned admission threshold.

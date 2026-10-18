@@ -1,0 +1,2 @@
+case,engine,rows,mean_us_per_query,error_us,allocated_bytes_per_query
+models,kokodb,1000,7.144791614168202,0.3298264632032106,29829.575468340656

@@ -68,7 +68,7 @@ internal class Executor(private val catalog: Catalog) {
 
     fun query(statement: Statement, params: Map<String, Any?>): List<Row> {
         val selection = select(statement, params)
-        return selection.table.rows.asSequence()
+        return selection.candidates().asSequence()
             .filter { matches(it, selection.filter) }
             .map { row -> Row(selection.indices.associate { selection.table.columns[it].name to row[it] }) }
             .toList()
@@ -78,7 +78,7 @@ internal class Executor(private val catalog: Catalog) {
         val selection = select(statement, params)
         val result = if (selection.filter == null) ArrayList<M>(selection.table.rows.size) else ArrayList<M>()
         val values = StoredModelValues()
-        for (row in selection.table.rows) {
+        for (row in selection.candidates()) {
             if (!matches(row, selection.filter)) continue
             values.row = row
             try {
@@ -108,7 +108,11 @@ internal class Executor(private val catalog: Catalog) {
         return Selection(table, indices, filter)
     }
 
-    private data class Selection(val table: Table, val indices: List<Int>, val filter: Pair<Int, Value>?)
+    private data class Selection(val table: Table, val indices: List<Int>, val filter: Pair<Int, Value>?) {
+        fun candidates(): List<List<Value>> =
+            if (filter != null && filter.first == table.primaryKeyColumn) listOfNotNull(table.findPrimaryKey(filter.second))
+            else table.rows
+    }
 
     private class StoredModelValues : ModelValues {
         var row: List<Value>? = null

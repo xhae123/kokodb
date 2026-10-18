@@ -1,0 +1,719 @@
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.hit
+# Parameters: (engine = kokodb, rows = 1000)
+
+# Run progress: 0.00% complete, ETA 00:01:48
+# Fork: 1 of 3
+# Warmup Iteration   1: 4.032 us/op
+# Warmup Iteration   2: 3.545 us/op
+# Warmup Iteration   3: 3.528 us/op
+Iteration   1: 3.528 us/op
+                 gc.alloc.rate:      661.123 MB/sec
+                 gc.alloc.rate.norm: 2445.972 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   2: 3.529 us/op
+                 gc.alloc.rate:      660.930 MB/sec
+                 gc.alloc.rate.norm: 2445.972 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            3.000 ms
+
+Iteration   3: 3.766 us/op
+                 gc.alloc.rate:      619.114 MB/sec
+                 gc.alloc.rate.norm: 2455.184 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            4.000 ms
+
+
+# Run progress: 5.56% complete, ETA 00:01:46
+# Fork: 2 of 3
+# Warmup Iteration   1: 4.108 us/op
+# Warmup Iteration   2: 3.570 us/op
+# Warmup Iteration   3: 3.585 us/op
+Iteration   1: 3.562 us/op
+                 gc.alloc.rate:      654.763 MB/sec
+                 gc.alloc.rate.norm: 2445.974 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            3.000 ms
+
+Iteration   2: 3.569 us/op
+                 gc.alloc.rate:      653.439 MB/sec
+                 gc.alloc.rate.norm: 2445.973 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   3: 3.566 us/op
+                 gc.alloc.rate:      653.955 MB/sec
+                 gc.alloc.rate.norm: 2454.667 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            3.000 ms
+
+
+# Run progress: 11.11% complete, ETA 00:01:40
+# Fork: 3 of 3
+# Warmup Iteration   1: 4.250 us/op
+# Warmup Iteration   2: 3.230 us/op
+# Warmup Iteration   3: 3.217 us/op
+Iteration   1: 3.223 us/op
+                 gc.alloc.rate:      690.630 MB/sec
+                 gc.alloc.rate.norm: 2333.976 B/op
+                 gc.count:           19.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   2: 3.532 us/op
+                 gc.alloc.rate:      630.042 MB/sec
+                 gc.alloc.rate.norm: 2333.969 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   3: 3.330 us/op
+                 gc.alloc.rate:      668.333 MB/sec
+                 gc.alloc.rate.norm: 2341.718 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            4.000 ms
+
+
+
+Result "comparison.PointQueryBenchmark.hit":
+  3.512 ±(99.9%) 0.260 us/op [Average]
+  (min, avg, max) = (3.223, 3.512, 3.766), stdev = 0.155
+  CI (99.9%): [3.252, 3.771] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.alloc.rate":
+  654.703 ±(99.9%) 34.813 MB/sec [Average]
+  (min, avg, max) = (619.114, 654.703, 690.630), stdev = 20.716
+  CI (99.9%): [619.891, 689.516] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.alloc.rate.norm":
+  2411.489 ±(99.9%) 94.717 B/op [Average]
+  (min, avg, max) = (2333.969, 2411.489, 2455.184), stdev = 56.365
+  CI (99.9%): [2316.772, 2506.206] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.count":
+  161.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (17.000, 17.889, 19.000), stdev = 0.601
+  CI (99.9%): [161.000, 161.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.time":
+  33.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (3.000, 3.667, 4.000), stdev = 0.500
+  CI (99.9%): [33.000, 33.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.hit
+# Parameters: (engine = kokodb, rows = 10000)
+
+# Run progress: 16.67% complete, ETA 00:01:33
+# Fork: 1 of 3
+# Warmup Iteration   1: 35.386 us/op
+# Warmup Iteration   2: 35.725 us/op
+# Warmup Iteration   3: 34.714 us/op
+Iteration   1: 34.711 us/op
+                 gc.alloc.rate:      65.052 MB/sec
+                 gc.alloc.rate.norm: 2367.995 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   2: 34.532 us/op
+                 gc.alloc.rate:      65.387 MB/sec
+                 gc.alloc.rate.norm: 2367.993 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   3: 34.586 us/op
+                 gc.alloc.rate:      65.110 MB/sec
+                 gc.alloc.rate.norm: 3182.922 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+
+# Run progress: 22.22% complete, ETA 00:01:30
+# Fork: 2 of 3
+# Warmup Iteration   1: 35.147 us/op
+# Warmup Iteration   2: 35.264 us/op
+# Warmup Iteration   3: 34.727 us/op
+Iteration   1: 34.692 us/op
+                 gc.alloc.rate:      65.086 MB/sec
+                 gc.alloc.rate.norm: 2367.997 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   2: 34.943 us/op
+                 gc.alloc.rate:      64.619 MB/sec
+                 gc.alloc.rate.norm: 2367.994 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   3: 36.536 us/op
+                 gc.alloc.rate:      58.076 MB/sec
+                 gc.alloc.rate.norm: 3228.960 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+
+# Run progress: 27.78% complete, ETA 00:01:26
+# Fork: 3 of 3
+# Warmup Iteration   1: 36.139 us/op
+# Warmup Iteration   2: 34.349 us/op
+# Warmup Iteration   3: 35.061 us/op
+Iteration   1: 34.791 us/op
+                 gc.alloc.rate:      65.778 MB/sec
+                 gc.alloc.rate.norm: 2399.995 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            ≈ 0 ms
+
+Iteration   2: 35.385 us/op
+                 gc.alloc.rate:      64.674 MB/sec
+                 gc.alloc.rate.norm: 2399.992 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            2.000 ms
+
+Iteration   3: 34.587 us/op
+                 gc.alloc.rate:      66.144 MB/sec
+                 gc.alloc.rate.norm: 3226.077 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            ≈ 0 ms
+
+
+
+Result "comparison.PointQueryBenchmark.hit":
+  34.974 ±(99.9%) 1.078 us/op [Average]
+  (min, avg, max) = (34.532, 34.974, 36.536), stdev = 0.641
+  CI (99.9%): [33.896, 36.051] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.alloc.rate":
+  64.436 ±(99.9%) 4.091 MB/sec [Average]
+  (min, avg, max) = (58.076, 64.436, 66.144), stdev = 2.435
+  CI (99.9%): [60.345, 68.527] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.alloc.rate.norm":
+  2656.658 ±(99.9%) 701.413 B/op [Average]
+  (min, avg, max) = (2367.993, 2656.658, 3228.960), stdev = 417.400
+  CI (99.9%): [1955.245, 3358.072] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.count":
+  14.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (1.000, 1.556, 2.000), stdev = 0.527
+  CI (99.9%): [14.000, 14.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.hit:gc.time":
+  8.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (≈ 0, 0.889, 2.000), stdev = 0.601
+  CI (99.9%): [8.000, 8.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.miss
+# Parameters: (engine = kokodb, rows = 1000)
+
+# Run progress: 33.33% complete, ETA 00:01:20
+# Fork: 1 of 3
+# Warmup Iteration   1: 4.090 us/op
+# Warmup Iteration   2: 3.625 us/op
+# Warmup Iteration   3: 3.555 us/op
+Iteration   1: 3.673 us/op
+                 gc.alloc.rate:      614.238 MB/sec
+                 gc.alloc.rate.norm: 2365.978 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            3.000 ms
+
+Iteration   2: 3.520 us/op
+                 gc.alloc.rate:      640.862 MB/sec
+                 gc.alloc.rate.norm: 2365.969 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   3: 3.519 us/op
+                 gc.alloc.rate:      641.021 MB/sec
+                 gc.alloc.rate.norm: 2374.558 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            3.000 ms
+
+
+# Run progress: 38.89% complete, ETA 00:01:13
+# Fork: 2 of 3
+# Warmup Iteration   1: 4.076 us/op
+# Warmup Iteration   2: 3.538 us/op
+# Warmup Iteration   3: 3.538 us/op
+Iteration   1: 3.520 us/op
+                 gc.alloc.rate:      640.919 MB/sec
+                 gc.alloc.rate.norm: 2365.969 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            3.000 ms
+
+Iteration   2: 3.520 us/op
+                 gc.alloc.rate:      640.878 MB/sec
+                 gc.alloc.rate.norm: 2365.975 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   3: 3.521 us/op
+                 gc.alloc.rate:      640.662 MB/sec
+                 gc.alloc.rate.norm: 2374.562 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            3.000 ms
+
+
+# Run progress: 44.44% complete, ETA 00:01:06
+# Fork: 3 of 3
+# Warmup Iteration   1: 4.173 us/op
+# Warmup Iteration   2: 3.655 us/op
+# Warmup Iteration   3: 3.613 us/op
+Iteration   1: 3.602 us/op
+                 gc.alloc.rate:      622.140 MB/sec
+                 gc.alloc.rate.norm: 2349.974 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   2: 3.605 us/op
+                 gc.alloc.rate:      621.655 MB/sec
+                 gc.alloc.rate.norm: 2349.972 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            3.000 ms
+
+Iteration   3: 3.622 us/op
+                 gc.alloc.rate:      618.382 MB/sec
+                 gc.alloc.rate.norm: 2358.756 B/op
+                 gc.count:           17.000 counts
+                 gc.time:            3.000 ms
+
+
+
+Result "comparison.PointQueryBenchmark.miss":
+  3.567 ±(99.9%) 0.099 us/op [Average]
+  (min, avg, max) = (3.519, 3.567, 3.673), stdev = 0.059
+  CI (99.9%): [3.468, 3.666] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.alloc.rate":
+  631.195 ±(99.9%) 19.639 MB/sec [Average]
+  (min, avg, max) = (614.238, 631.195, 641.021), stdev = 11.687
+  CI (99.9%): [611.556, 650.834] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.alloc.rate.norm":
+  2363.524 ±(99.9%) 15.235 B/op [Average]
+  (min, avg, max) = (2349.972, 2363.524, 2374.562), stdev = 9.066
+  CI (99.9%): [2348.288, 2378.759] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.count":
+  154.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (16.000, 17.111, 18.000), stdev = 0.782
+  CI (99.9%): [154.000, 154.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.time":
+  30.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (3.000, 3.333, 4.000), stdev = 0.500
+  CI (99.9%): [30.000, 30.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.miss
+# Parameters: (engine = kokodb, rows = 10000)
+
+# Run progress: 50.00% complete, ETA 00:00:59
+# Fork: 1 of 3
+# Warmup Iteration   1: 35.780 us/op
+# Warmup Iteration   2: 34.950 us/op
+# Warmup Iteration   3: 34.996 us/op
+Iteration   1: 34.809 us/op
+                 gc.alloc.rate:      62.679 MB/sec
+                 gc.alloc.rate.norm: 2287.995 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   2: 35.434 us/op
+                 gc.alloc.rate:      61.570 MB/sec
+                 gc.alloc.rate.norm: 2287.994 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   3: 36.267 us/op
+                 gc.alloc.rate:      58.234 MB/sec
+                 gc.alloc.rate.norm: 3146.619 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+
+# Run progress: 55.56% complete, ETA 00:00:53
+# Fork: 2 of 3
+# Warmup Iteration   1: 32.828 us/op
+# Warmup Iteration   2: 32.253 us/op
+# Warmup Iteration   3: 33.026 us/op
+Iteration   1: 32.744 us/op
+                 gc.alloc.rate:      68.018 MB/sec
+                 gc.alloc.rate.norm: 2335.995 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   2: 33.155 us/op
+                 gc.alloc.rate:      67.185 MB/sec
+                 gc.alloc.rate.norm: 2335.994 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   3: 32.168 us/op
+                 gc.alloc.rate:      69.366 MB/sec
+                 gc.alloc.rate.norm: 3109.325 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+
+# Run progress: 61.11% complete, ETA 00:00:46
+# Fork: 3 of 3
+# Warmup Iteration   1: 33.310 us/op
+# Warmup Iteration   2: 32.526 us/op
+# Warmup Iteration   3: 32.432 us/op
+Iteration   1: 32.814 us/op
+                 gc.alloc.rate:      67.880 MB/sec
+                 gc.alloc.rate.norm: 2335.996 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            2.000 ms
+
+Iteration   2: 33.768 us/op
+                 gc.alloc.rate:      65.964 MB/sec
+                 gc.alloc.rate.norm: 2335.994 B/op
+                 gc.count:           1.000 counts
+                 gc.time:            1.000 ms
+
+Iteration   3: 33.001 us/op
+                 gc.alloc.rate:      68.120 MB/sec
+                 gc.alloc.rate.norm: 3131.867 B/op
+                 gc.count:           2.000 counts
+                 gc.time:            1.000 ms
+
+
+
+Result "comparison.PointQueryBenchmark.miss":
+  33.795 ±(99.9%) 2.345 us/op [Average]
+  (min, avg, max) = (32.168, 33.795, 36.267), stdev = 1.395
+  CI (99.9%): [31.451, 36.140] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.alloc.rate":
+  65.446 ±(99.9%) 6.317 MB/sec [Average]
+  (min, avg, max) = (58.234, 65.446, 69.366), stdev = 3.759
+  CI (99.9%): [59.129, 71.763] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.alloc.rate.norm":
+  2589.753 ±(99.9%) 680.948 B/op [Average]
+  (min, avg, max) = (2287.994, 2589.753, 3146.619), stdev = 405.221
+  CI (99.9%): [1908.806, 3270.701] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.count":
+  15.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (1.000, 1.667, 2.000), stdev = 0.500
+  CI (99.9%): [15.000, 15.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.miss:gc.time":
+  10.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (1.000, 1.111, 2.000), stdev = 0.333
+  CI (99.9%): [10.000, 10.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.updateThenRead
+# Parameters: (engine = kokodb, rows = 1000)
+
+# Run progress: 66.67% complete, ETA 00:00:40
+# Fork: 1 of 3
+# Warmup Iteration   1: 24.240 us/op
+# Warmup Iteration   2: 16.067 us/op
+# Warmup Iteration   3: 15.944 us/op
+Iteration   1: 14.968 us/op
+                 gc.alloc.rate:      546.531 MB/sec
+                 gc.alloc.rate.norm: 8579.995 B/op
+                 gc.count:           14.000 counts
+                 gc.time:            5.000 ms
+
+Iteration   2: 14.408 us/op
+                 gc.alloc.rate:      567.845 MB/sec
+                 gc.alloc.rate.norm: 8579.975 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   3: 14.320 us/op
+                 gc.alloc.rate:      570.065 MB/sec
+                 gc.alloc.rate.norm: 8614.119 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            5.000 ms
+
+
+# Run progress: 72.22% complete, ETA 00:00:33
+# Fork: 2 of 3
+# Warmup Iteration   1: 27.093 us/op
+# Warmup Iteration   2: 15.381 us/op
+# Warmup Iteration   3: 16.831 us/op
+Iteration   1: 16.167 us/op
+                 gc.alloc.rate:      505.948 MB/sec
+                 gc.alloc.rate.norm: 8579.958 B/op
+                 gc.count:           14.000 counts
+                 gc.time:            5.000 ms
+
+Iteration   2: 14.527 us/op
+                 gc.alloc.rate:      563.174 MB/sec
+                 gc.alloc.rate.norm: 8579.987 B/op
+                 gc.count:           16.000 counts
+                 gc.time:            5.000 ms
+
+Iteration   3: 14.336 us/op
+                 gc.alloc.rate:      569.577 MB/sec
+                 gc.alloc.rate.norm: 8614.152 B/op
+                 gc.count:           15.000 counts
+                 gc.time:            4.000 ms
+
+
+# Run progress: 77.78% complete, ETA 00:00:26
+# Fork: 3 of 3
+# Warmup Iteration   1: 17.112 us/op
+# Warmup Iteration   2: 14.264 us/op
+# Warmup Iteration   3: 12.406 us/op
+Iteration   1: 12.210 us/op
+                 gc.alloc.rate:      674.416 MB/sec
+                 gc.alloc.rate.norm: 8635.989 B/op
+                 gc.count:           19.000 counts
+                 gc.time:            4.000 ms
+
+Iteration   2: 12.236 us/op
+                 gc.alloc.rate:      672.996 MB/sec
+                 gc.alloc.rate.norm: 8635.983 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            5.000 ms
+
+Iteration   3: 12.348 us/op
+                 gc.alloc.rate:      666.321 MB/sec
+                 gc.alloc.rate.norm: 8666.104 B/op
+                 gc.count:           18.000 counts
+                 gc.time:            5.000 ms
+
+
+
+Result "comparison.PointQueryBenchmark.updateThenRead":
+  13.947 ±(99.9%) 2.325 us/op [Average]
+  (min, avg, max) = (12.210, 13.947, 16.167), stdev = 1.383
+  CI (99.9%): [11.622, 16.271] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.alloc.rate":
+  592.986 ±(99.9%) 104.164 MB/sec [Average]
+  (min, avg, max) = (505.948, 592.986, 674.416), stdev = 61.986
+  CI (99.9%): [488.823, 697.150] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.alloc.rate.norm":
+  8609.585 ±(99.9%) 53.590 B/op [Average]
+  (min, avg, max) = (8579.958, 8609.585, 8666.104), stdev = 31.890
+  CI (99.9%): [8555.995, 8663.174] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.count":
+  146.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (14.000, 16.222, 19.000), stdev = 1.787
+  CI (99.9%): [146.000, 146.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.time":
+  42.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (4.000, 4.667, 5.000), stdev = 0.500
+  CI (99.9%): [42.000, 42.000] (assumes normal distribution)
+
+
+# JMH version: 1.37
+# VM version: JDK 17.0.20.1, OpenJDK 64-Bit Server VM, 17.0.20.1+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms64m -Xmx256m -XX:-UsePerfData
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 1 s each
+# Measurement: 3 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: comparison.PointQueryBenchmark.updateThenRead
+# Parameters: (engine = kokodb, rows = 10000)
+
+# Run progress: 83.33% complete, ETA 00:00:19
+# Fork: 1 of 3
+# Warmup Iteration   1: 112.932 us/op
+# Warmup Iteration   2: 96.035 us/op
+# Warmup Iteration   3: 98.796 us/op
+Iteration   1: 126.550 us/op
+                 gc.alloc.rate:      335.523 MB/sec
+                 gc.alloc.rate.norm: 44536.227 B/op
+                 gc.count:           7.000 counts
+                 gc.time:            10.000 ms
+
+Iteration   2: 124.814 us/op
+                 gc.alloc.rate:      340.197 MB/sec
+                 gc.alloc.rate.norm: 44536.231 B/op
+                 gc.count:           8.000 counts
+                 gc.time:            13.000 ms
+
+Iteration   3: 99.754 us/op
+                 gc.alloc.rate:      329.790 MB/sec
+                 gc.alloc.rate.norm: 46982.365 B/op
+                 gc.count:           11.000 counts
+                 gc.time:            13.000 ms
+
+
+# Run progress: 88.89% complete, ETA 00:00:13
+# Fork: 2 of 3
+# Warmup Iteration   1: 121.524 us/op
+# Warmup Iteration   2: 115.023 us/op
+# Warmup Iteration   3: 153.252 us/op
+Iteration   1: 101.909 us/op
+                 gc.alloc.rate:      416.787 MB/sec
+                 gc.alloc.rate.norm: 44560.189 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            11.000 ms
+
+Iteration   2: 97.515 us/op
+                 gc.alloc.rate:      435.718 MB/sec
+                 gc.alloc.rate.norm: 44560.181 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            10.000 ms
+
+Iteration   3: 95.342 us/op
+                 gc.alloc.rate:      342.383 MB/sec
+                 gc.alloc.rate.norm: 46897.761 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            10.000 ms
+
+
+# Run progress: 94.44% complete, ETA 00:00:06
+# Fork: 3 of 3
+# Warmup Iteration   1: 138.050 us/op
+# Warmup Iteration   2: 108.826 us/op
+# Warmup Iteration   3: 106.552 us/op
+Iteration   1: 107.723 us/op
+                 gc.alloc.rate:      395.156 MB/sec
+                 gc.alloc.rate.norm: 44640.200 B/op
+                 gc.count:           9.000 counts
+                 gc.time:            10.000 ms
+
+Iteration   2: 105.882 us/op
+                 gc.alloc.rate:      402.028 MB/sec
+                 gc.alloc.rate.norm: 44640.190 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            9.000 ms
+
+Iteration   3: 104.968 us/op
+                 gc.alloc.rate:      315.269 MB/sec
+                 gc.alloc.rate.norm: 47188.520 B/op
+                 gc.count:           10.000 counts
+                 gc.time:            10.000 ms
+
+
+
+Result "comparison.PointQueryBenchmark.updateThenRead":
+  107.162 ±(99.9%) 18.877 us/op [Average]
+  (min, avg, max) = (95.342, 107.162, 126.550), stdev = 11.233
+  CI (99.9%): [88.285, 126.039] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.alloc.rate":
+  368.095 ±(99.9%) 74.172 MB/sec [Average]
+  (min, avg, max) = (315.269, 368.095, 435.718), stdev = 44.139
+  CI (99.9%): [293.922, 442.267] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.alloc.rate.norm":
+  45393.541 ±(99.9%) 2058.360 B/op [Average]
+  (min, avg, max) = (44536.227, 45393.541, 47188.520), stdev = 1224.897
+  CI (99.9%): [43335.180, 47451.901] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.count":
+  85.000 ±(99.9%) 0.001 counts [Sum]
+  (min, avg, max) = (7.000, 9.444, 11.000), stdev = 1.236
+  CI (99.9%): [85.000, 85.000] (assumes normal distribution)
+
+Secondary result "comparison.PointQueryBenchmark.updateThenRead:gc.time":
+  96.000 ±(99.9%) 0.001 ms [Sum]
+  (min, avg, max) = (9.000, 10.667, 13.000), stdev = 1.414
+  CI (99.9%): [96.000, 96.000] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:02:01
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                              (engine)  (rows)  Mode  Cnt      Score      Error   Units
+PointQueryBenchmark.hit                                  kokodb    1000  avgt    9      3.512 ±    0.260   us/op
+PointQueryBenchmark.hit:gc.alloc.rate                    kokodb    1000  avgt    9    654.703 ±   34.813  MB/sec
+PointQueryBenchmark.hit:gc.alloc.rate.norm               kokodb    1000  avgt    9   2411.489 ±   94.717    B/op
+PointQueryBenchmark.hit:gc.count                         kokodb    1000  avgt    9    161.000             counts
+PointQueryBenchmark.hit:gc.time                          kokodb    1000  avgt    9     33.000                 ms
+PointQueryBenchmark.hit                                  kokodb   10000  avgt    9     34.974 ±    1.078   us/op
+PointQueryBenchmark.hit:gc.alloc.rate                    kokodb   10000  avgt    9     64.436 ±    4.091  MB/sec
+PointQueryBenchmark.hit:gc.alloc.rate.norm               kokodb   10000  avgt    9   2656.658 ±  701.413    B/op
+PointQueryBenchmark.hit:gc.count                         kokodb   10000  avgt    9     14.000             counts
+PointQueryBenchmark.hit:gc.time                          kokodb   10000  avgt    9      8.000                 ms
+PointQueryBenchmark.miss                                 kokodb    1000  avgt    9      3.567 ±    0.099   us/op
+PointQueryBenchmark.miss:gc.alloc.rate                   kokodb    1000  avgt    9    631.195 ±   19.639  MB/sec
+PointQueryBenchmark.miss:gc.alloc.rate.norm              kokodb    1000  avgt    9   2363.524 ±   15.235    B/op
+PointQueryBenchmark.miss:gc.count                        kokodb    1000  avgt    9    154.000             counts
+PointQueryBenchmark.miss:gc.time                         kokodb    1000  avgt    9     30.000                 ms
+PointQueryBenchmark.miss                                 kokodb   10000  avgt    9     33.795 ±    2.345   us/op
+PointQueryBenchmark.miss:gc.alloc.rate                   kokodb   10000  avgt    9     65.446 ±    6.317  MB/sec
+PointQueryBenchmark.miss:gc.alloc.rate.norm              kokodb   10000  avgt    9   2589.753 ±  680.948    B/op
+PointQueryBenchmark.miss:gc.count                        kokodb   10000  avgt    9     15.000             counts
+PointQueryBenchmark.miss:gc.time                         kokodb   10000  avgt    9     10.000                 ms
+PointQueryBenchmark.updateThenRead                       kokodb    1000  avgt    9     13.947 ±    2.325   us/op
+PointQueryBenchmark.updateThenRead:gc.alloc.rate         kokodb    1000  avgt    9    592.986 ±  104.164  MB/sec
+PointQueryBenchmark.updateThenRead:gc.alloc.rate.norm    kokodb    1000  avgt    9   8609.585 ±   53.590    B/op
+PointQueryBenchmark.updateThenRead:gc.count              kokodb    1000  avgt    9    146.000             counts
+PointQueryBenchmark.updateThenRead:gc.time               kokodb    1000  avgt    9     42.000                 ms
+PointQueryBenchmark.updateThenRead                       kokodb   10000  avgt    9    107.162 ±   18.877   us/op
+PointQueryBenchmark.updateThenRead:gc.alloc.rate         kokodb   10000  avgt    9    368.095 ±   74.172  MB/sec
+PointQueryBenchmark.updateThenRead:gc.alloc.rate.norm    kokodb   10000  avgt    9  45393.541 ± 2058.360    B/op
+PointQueryBenchmark.updateThenRead:gc.count              kokodb   10000  avgt    9     85.000             counts
+PointQueryBenchmark.updateThenRead:gc.time               kokodb   10000  avgt    9     96.000                 ms
+
+Benchmark result is saved to /Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-primary-key-lookup/points-before/jmh.json
