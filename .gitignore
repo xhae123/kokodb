@@ -6,3 +6,4 @@ build/
 /benchmarks/results/
 /comparison/results/
 __pycache__/
+/.local/

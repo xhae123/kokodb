@@ -68,3 +68,8 @@ H2 is already a pure-Java embedded database, so absence of native binaries and a
 - When needed, explain the rationale or caveats in a body separated from the title by a blank line. Mark breaking changes with `type!:` or `type(scope)!:` and describe their impact in the body.
 - Review the staged diff and run the relevant build and tests before committing. Do not claim that checks passed if they were not run.
 - Do not commit secrets, local configuration, or build artifacts. Do not include or revert another contributor's changes without authorization.
+
+# Improvement Records
+
+- Keep detailed improvement records under `.local/improvements/`, including observations, alternatives, decisions and rationale, assumptions, commands, raw measurements, environment and artifact hashes, failures and corrections, validation outcomes, limitations, and revisit criteria.
+- Update records while working, including experiments that fail or lead to a rejected approach. Keep `.local/` out of Git; publish selected reproducible evidence in repository documentation and pull requests.
