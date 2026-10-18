@@ -9,7 +9,7 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
 - Correctness evidence includes 122 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
-- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The earlier runtime baseline was 119.1 KiB with no native archive entries; track current artifact bytes with each measurement; JVM and Kotlin dependencies are separate costs.
+- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-splice runtime baseline is 128.3 KiB; JVM and Kotlin dependencies are separate costs.
 
 See the [storage contract](transactions-and-persistence.md), [memory optimization evidence](baselines/2026-10-08-constraint-validation/README.md), and [durable measurements](baselines/2026-10-08-durable-storage/README.md) for exact scope and limitations.
 
@@ -17,7 +17,7 @@ The product purpose explicitly concerns Kotlin applications. The [prepared H2 co
 
 ## Bound durable recording and continue storage qualification
 
-Version-2 WAL frames now encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; immutable row-list construction and diff detection remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
+The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; immutable row-list construction and diff detection remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
 
 - Keep statement and transaction boundaries, force-before-acknowledgment, torn-tail checks, and recovery-required behavior intact.
 - Preserve six legacy-migration process-crash points alongside the existing nine commit/checkpoint boundaries, and mixed reference-model recovery tests.

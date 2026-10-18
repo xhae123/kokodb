@@ -158,7 +158,7 @@ KoKoDB.close()
 
 Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
 
-The [durable storage measurements](docs/baselines/2026-10-08-durable-storage/README.md) record commit, WAL, checkpoint and recovery costs. For 1,000 INSERTs, individual commits wrote about 6.97 MB of WAL versus 13.96 kB in one transaction. Those observations describe the earlier version-1 full-table WAL. Current version-2 records use row splices; batching still changes acknowledgment and rollback boundaries.
+The [row-splice WAL measurements](docs/baselines/2026-10-18-wal-row-splices/README.md) compare identical transaction boundaries before and after the format change. For 1,000 separately committed INSERTs, WAL bytes fell from 6,972,995 to 96,890 and allocation per INSERT from 173,581.5 to 8,565.2 bytes. Commit latency was effectively unchanged; every transaction still forces the WAL. The runtime JAR grew from 121,928 to 131,379 bytes without new runtime dependencies. Raw data, point UPDATE/DELETE results, limitations, and reproduction commands are retained.
 
 ## Build setup
 
