@@ -1,0 +1,56 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+    "-XX:-UsePerfData",
+    "-Xms64m",
+    "-Xmx256m",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/build/libs/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/benchmarks.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/kotlin-stdlib-2.3.20.jar",
+    "benchmark.MutationBenchmark"
+  ],
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "source_commit": "c69f6fea5113c1ad8cafc000a968a82e448854f0",
+  "harness_sha256": "455b15f53f3ddcb06b87eaeb1f89ddd42e772d1f7d52a14cb488f6c2d1cbdd3d",
+  "jars": [
+    {
+      "name": "kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 146270,
+      "sha256": "999fe9bd4bd2e9bdc99f2b597636ad9d983871971373920ce0b0308e966599a2"
+    },
+    {
+      "name": "annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    },
+    {
+      "name": "benchmarks.jar",
+      "bytes": 14656,
+      "sha256": "daaeeeac780c65c03f84eac291f5b6196bbf018757e57fe114dfa5d97615afd2"
+    },
+    {
+      "name": "kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+    }
+  ],
+  "processes": [
+    {
+      "fork": 1,
+      "wall_ms": 1598.927291,
+      "max_rss_bytes": 112377856,
+      "configuration": "# java=17.0.20.1,filesystem=apfs"
+    },
+    {
+      "fork": 2,
+      "wall_ms": 1609.361583,
+      "max_rss_bytes": 112427008,
+      "configuration": "# java=17.0.20.1,filesystem=apfs"
+    },
+    {
+      "fork": 3,
+      "wall_ms": 1576.873875,
+      "max_rss_bytes": 112279552,
+      "configuration": "# java=17.0.20.1,filesystem=apfs"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+insert_rejected=63:Commit exceeds snapshot size limit (268435456 bytes)
+accepted=63
+visible=63
+wal_bytes=264247200
+checkpoint=success
+snapshot_bytes=264241750
+elapsed_ms=2879

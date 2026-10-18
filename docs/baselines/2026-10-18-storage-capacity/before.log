@@ -1,0 +1,6 @@
+accepted=65
+visible=65
+wal_bytes=272635996
+checkpoint=DatabaseException:Invalid storage: payload exceeds size limit
+snapshot_bytes=56
+elapsed_ms=1617

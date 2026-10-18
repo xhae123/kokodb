@@ -104,6 +104,9 @@ Payload:
 - Version-1 `KTX1` frames contain complete dirty tables using the snapshot table-count/table encoding. Their decoding and corruption checks remain supported.
 - Frame sequences must increase exactly by one from the WAL base. No SQL strings, caller parameters, model names, or generated adapter names are logged.
 - The initial hard bounds are 64 MiB per WAL frame and 256 MiB per snapshot, with bounded field/table/row counts derived from the remaining bytes. Check bounds before allocation, and reject unsupported versions/tags, invalid UTF-8, semantic errors and trailing bytes before publication.
+- File commits also check the encoded size of the resulting snapshot before WAL append. A transaction that would grow it beyond 256 MiB fails without publishing rows or changing the WAL; the handle remains usable. The limit includes the snapshot header, schema metadata and UTF-8 row values, rather than Kotlin character counts. Only the final transaction state must fit.
+- Recovery calculates the current encoded size once; later commits adjust it from changed row intervals. This avoids serializing the complete database on each commit. Size accounting changes neither the snapshot/WAL format nor force-before-acknowledgment ordering.
+- Older version-2 writers could commit catalogs exceeding the snapshot limit. Such a WAL can still be recovered, and strictly shrinking commits are allowed even while the catalog remains over the limit. Checkpoint and non-shrinking changes are rejected until the catalog fits; no-op writes still succeed without recording a commit. Legacy version-1 migration still requires a representable snapshot. Encoded-size bounds are not JVM heap bounds: object representations and encoding buffers require additional memory.
 - CRC32C detects accidental corruption; it is not authentication. Unsupported future major/minor formats are rejected rather than guessed or overwritten.
 
 ### Legacy migration
@@ -113,7 +116,7 @@ Opening a version-1 WAL validates all complete frames and recovers its committed
 ## Persistent commit protocol
 
 1. Serialize operations through the KoKoDB facade lock or sequential caller discipline for an independent Database. Hold the lifetime file lock.
-2. Finish the overlay, validate all constraints, and encode/bound the complete WAL frame before touching disk.
+2. Finish the overlay, validate all constraints, check the resulting encoded snapshot size, and encode/bound the complete WAL frame before touching disk.
 3. Append the frame using write loops until every byte, including its commit trailer, is written. Never overwrite the committed WAL prefix.
 4. Call `FileChannel.force(true)` for the WAL. New/replaced file directory entries must already be synchronized by initialization/checkpoint protocols.
 5. Publish the new in-memory catalog reference and commit sequence.

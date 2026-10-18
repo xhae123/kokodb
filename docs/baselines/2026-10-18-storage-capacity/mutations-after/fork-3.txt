@@ -1,0 +1,11 @@
+# java=17.0.20.1,filesystem=apfs
+rows,operation,operations,ns_per_operation,allocated_bytes_per_operation,wal_bytes_per_operation,reopen_ms
+100,update,20,3077443.8,16598.8,95.5,5.248
+100,key_move,20,3903906.3,12036.8,96.0,5.313
+100,delete,20,3534770.9,4776.0,83.0,6.851
+1000,update,20,3162035.5,6339.6,95.5,3.155
+1000,key_move,20,3156820.8,62512.0,96.0,4.303
+1000,delete,20,3794460.5,4149.6,83.0,3.867
+10000,update,20,3145668.8,9406.8,95.5,8.117
+10000,key_move,20,3300004.2,537444.8,96.0,8.792
+10000,delete,20,3658158.4,4152.0,83.0,14.221
