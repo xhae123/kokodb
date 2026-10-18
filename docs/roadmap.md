@@ -43,3 +43,5 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 - Complete release metadata and publishing setup. Keep unreleased examples usable from the sample checkout until artifacts are actually available.
 
 Joins, richer expressions, nullable/additional types, foreign keys, general DTO mapping, schema migration and broader concurrency remain separate feature work. Each needs a stated use case and correctness contract rather than an expanding list of nominal SQL keywords.
+
+The [coroutine proposal decisions](coroutine-proposals.md) reject the current integrated admission/lifecycle, Flow-first and coroutine group-writer proposals. Controlled diagnostics show useful external admission behavior, while true streaming and independent group commit remain unqualified. These closed proposals are not implemented features or release promises.

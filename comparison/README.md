@@ -60,3 +60,9 @@ The [seeded differential checker](../docs/differential-qualification.md) compare
 ./gradlew :comparison:differential :comparison:installDist
 python3 comparison/qualify.py --java "$JAVA_HOME/bin/java" --output .local/qualification/current
 ```
+
+## Coroutine contract diagnostics
+
+`./gradlew :comparison:coroutineStudy` runs controlled worker-admission, cancellation and eager-Flow checks. `./gradlew commitCostStudy` attributes append/force calls in the existing synchronous file path and verifies reopened contents. These optional studies support the [coroutine proposal decisions](../docs/coroutine-proposals.md); they are not integrated coroutine, snapshot-streaming or group-commit benchmarks.
+
+The comparison module includes kotlinx-coroutines-core 1.10.2 only for these diagnostics. The core dependency graph and public API are unchanged. Artificial scheduling windows are not CI performance gates; normal builds compile the study sources.
