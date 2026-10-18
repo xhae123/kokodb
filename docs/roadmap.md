@@ -9,6 +9,7 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
 - Correctness evidence includes 134 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- [Seeded differential qualification](differential-qualification.md) compares affected counts, contents, multi-table commit/rollback and file reopen/checkpoints against H2 and a separate map model. CI uses fixed bounded seeds; passing them does not establish exhaustive SQL correctness.
 - Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-block runtime baseline is 139.1 KiB; JVM and Kotlin dependencies are separate costs.
 
 See the [storage contract](transactions-and-persistence.md), [memory optimization evidence](baselines/2026-10-08-constraint-validation/README.md), and [durable measurements](baselines/2026-10-08-durable-storage/README.md) for exact scope and limitations.

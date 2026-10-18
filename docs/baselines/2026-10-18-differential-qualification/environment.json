@@ -1,0 +1,143 @@
+{
+  "purpose": "Finite correctness qualification, not a performance comparison",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "architecture": "arm64",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "commit": "0637b37536fac9f458499258b60723ddcaa8f14b",
+  "steps": 1000,
+  "seeds": [
+    17,
+    31,
+    20261018
+  ],
+  "modes": [
+    "memory",
+    "file"
+  ],
+  "sources": {
+    "comparison/src/main/kotlin/comparison/DifferentialCheck.kt": "e170ea93db1dfd501760502e4d0bce17aa9a8fb720385bee495bf69f8e707909",
+    "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/qualify.py": "65d585065f9b304c810279e99a65ad13a6961eef2b74ce91936ebbe719debd60"
+  },
+  "jars": [
+    {
+      "name": "annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    },
+    {
+      "name": "commons-math3-3.6.1.jar",
+      "bytes": 2213560,
+      "sha256": "1e56d7b058d28b65abd256b8458e3885b674c1d588fa43cd7d1cbb9c7ef2b308"
+    },
+    {
+      "name": "comparison.jar",
+      "bytes": 77456,
+      "sha256": "cfe8b0bd498e255fd9cea7186947dc0718d8c3da1cd46821dcc12fa4ddf918d3"
+    },
+    {
+      "name": "h2-2.5.252.jar",
+      "bytes": 2693360,
+      "sha256": "90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20"
+    },
+    {
+      "name": "jmh-core-1.37.jar",
+      "bytes": 552986,
+      "sha256": "dc0eaf2bbf0036a70b60798c785d6e03a9daf06b68b8edb0f1ba9eb3421baeb3"
+    },
+    {
+      "name": "jopt-simple-5.0.4.jar",
+      "bytes": 78146,
+      "sha256": "df26cc58f235f477db07f753ba5a3ab243ebe5789d9f89ecf68dd62ea9a66c28"
+    },
+    {
+      "name": "kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 142467,
+      "sha256": "857d16c8f37fbc202ae025091c2a5b7a5173e2bc50a514d774150ef5367f944d"
+    },
+    {
+      "name": "kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+    }
+  ],
+  "commands": [
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "memory",
+      "17",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/memory-17"
+    ],
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "memory",
+      "31",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/memory-31"
+    ],
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "memory",
+      "20261018",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/memory-20261018"
+    ],
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "file",
+      "17",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/file-17"
+    ],
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "file",
+      "31",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/file-31"
+    ],
+    [
+      "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/.local/worktrees/seeded-differential/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+      "comparison.DifferentialCheck",
+      "file",
+      "20261018",
+      "1000",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-release-qualification/results/file-20261018"
+    ]
+  ]
+}

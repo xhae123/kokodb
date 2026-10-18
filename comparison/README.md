@@ -51,3 +51,12 @@ The point suite uses 1,000/10,000 rows, cycling hit/miss keys and a separate UPD
 Use `--runtime /path/to/older-kokodb.jar --engines kokodb` for an API-compatible old runtime with the exact same harness. `--rows 1000` narrows a run; it does not change the result contract. The default `--suite models` retains the full-table benchmark and its original five-iteration settings. `--quick` remains diagnostic only.
 
 `comparison.IndexLifecycleProbe` separately records the first scan, index-building lookup, and cached lookup on a 10,000-row database, with thread allocation and content checks. Run it from the installed comparison classpath. It discards two setup rounds and records three rounds, but its individual timing observations are exploratory and cannot replace forked JMH results or establish a tuned admission threshold.
+
+## Independent correctness qualification
+
+The [seeded differential checker](../docs/differential-qualification.md) compares KoKoDB, H2 and an independent map model. It checks SQL results, affected counts, transaction outcomes and KoKoDB file reopen/checkpoints. It is separate from these performance comparisons and adds no runtime dependency.
+
+```sh
+./gradlew :comparison:differential :comparison:installDist
+python3 comparison/qualify.py --java "$JAVA_HOME/bin/java" --output .local/qualification/current
+```
