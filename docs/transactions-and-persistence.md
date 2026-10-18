@@ -48,7 +48,7 @@ Use a versioned binary snapshot plus an append-only transaction WAL containing r
 
 - SQL replay would depend on parser versions and statement semantics. Splices store resolved relational values. Recovery applies a transaction exactly once in sequence after its checkpoint, rather than executing SQL again.
 - One frame contains all changed tables, including newly created tables. Its commit trailer is the transaction boundary. Recovery constructs and validates every candidate table before publishing any of them.
-- A point INSERT, UPDATE, or DELETE records only its changed rows plus bounded table/frame metadata. Diff detection and recovered key validation remain O(N); point UPDATE copies one row block and the outer block references. A transaction with dispersed edits can record unchanged rows between its first and last edit; this is not a general minimal-delta algorithm.
+- A point INSERT, UPDATE, or DELETE records only its changed rows plus bounded table/frame metadata. Diff detection remains O(N); point UPDATE copies one row block and the outer block references. Recovery validates changed keys incrementally in private replay state. A transaction with dispersed edits can record unchanged rows between its first and last edit; this is not a general minimal-delta algorithm.
 - Keyless duplicate rows and primary-key changes need no persistent surrogate row identifier. Row order is an internal encoding invariant, not a SELECT ordering guarantee.
 - Checkpoints write the complete committed catalog and then reset the WAL. They bound WAL growth without changing transaction semantics.
 - Java object serialization and Kotlin class names are not part of the durable data representation. Storage contains relational names, types, keys, and primitive values.
@@ -163,13 +163,21 @@ Failed checkpoints before WAL reset retain the WAL needed for recovery. Ambiguou
 2. If neither authoritative file exists, install/force the empty WAL and sync its directory before installing/forcing the empty snapshot and syncing again. WAL-first bootstrap allows completing initialization only when a snapshot is absent and the WAL is exactly a valid sequence-zero header. A snapshot with a missing WAL always fails: an empty sequence-zero snapshot can also belong to a live database whose committed rows were entirely in the missing WAL.
 3. Validate the snapshot header, UUID, version, lengths, checksums, schema, and rows into a temporary catalog. A corrupt snapshot is an explicit error; do not recreate an empty database.
 4. Validate the WAL header and identity. Its base may be older than or equal to the snapshot sequence; a newer base means required history is missing and opening fails.
-5. Scan frames in strict sequence. Validate framing, checksums, schemas, encoded values, and splice bounds in all complete frames, even ones covered by the snapshot. Replay only frames newer than the snapshot against their actual predecessor state, verifying predecessor counts and complete resulting keys in a private catalog. Covered splices cannot be applied to a newer snapshot; the snapshot supplies the already-committed state.
+5. Scan frames in strict sequence. Validate framing, checksums, schemas, encoded values, and splice bounds in all complete frames, even ones covered by the snapshot. Replay only frames newer than the snapshot against their actual predecessor state, verifying predecessor counts and resulting key uniqueness in a private builder. Covered splices cannot be applied to a newer snapshot; the snapshot supplies the already-committed state.
 6. A physically incomplete terminal frame whose complete prefix fields have valid bounded framing has no complete commit trailer and is ignored as an uncommitted tail. Complete checksum/trailer failures, bad headers, sequence gaps, or corruption within the prefix fail opening; do not scan past them searching for a later record.
 7. Only after the whole valid prefix is checked, truncate/force an ignored incomplete tail before allowing new appends, or perform a safe checkpoint when the WAL predates the snapshot or uses version 1. Do not repair a file during read-only validation.
 8. Reconcile generated models: reuse exactly matching persisted schemas; a mismatch fails open. Missing generated tables are created through the normal commit protocol. Do not silently drop/recreate persisted tables.
 9. Publish the recovered committed catalog and expose the handle.
 
 A complete valid frame can survive a crash before the writer forced or acknowledged it; replaying it is allowed. What must never happen is exposing only part of its table changes or losing an acknowledged commit under the supported synchronization assumptions.
+
+### Private recovery state and incremental key validation
+
+Recovery starts from the validated snapshot and lazily creates a mutable row list and key set for each replayed table. A splice removes keys belonging to its replaced interval, then checks inserted keys against the retained set. Removing the full interval first permits valid key swaps. The invariant that all stored keys are unique is preserved without rescanning the whole table after each appended row.
+
+Only after every complete frame in the valid WAL prefix has passed validation does the builder produce ordinary immutable tables. Any error invalidates the builder; earlier private changes cannot be returned or retried. The original snapshot catalog stays unchanged. Freezing occurs before tail truncation or checkpoint/migration writes, so a complete invalid frame leaves the authoritative files untouched.
+
+The mutable lists and key sets are temporary recovery working state, not persistent indexes or shared transaction state. They are released after freezing. Equal-length replacements update positions directly; length-changing middle splices can still shift O(N) row references. Hash-set collision behavior and retained working memory remain costs; the measured append-only improvement is not a worst-case complexity or memory guarantee. [Recovery scaling measurements](baselines/2026-10-18-recovery-scaling/README.md) include exact fixtures, allocation, process RSS and limitations.
 
 ## Close and failure state
 

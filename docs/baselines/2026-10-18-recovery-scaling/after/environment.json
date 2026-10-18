@@ -1,0 +1,33 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+    "-Xms64m",
+    "-Xmx256m",
+    "-XX:-UsePerfData",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-recovery-scaling:/Users/xhae000/Desktop/kokodb/build/libs/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.3.20/ed866de74ad3d49086a27bbd75952cd186479436/kotlin-stdlib-2.3.20.jar",
+    "RecoveryProbe"
+  ],
+  "source_commit": "9be286889f61bf9c7e41aba254ba88fa39e49461",
+  "harness_sha256": "228da4f36b3ce4c677898c268d954257723469281b42c947bae099dc8237b748",
+  "runtime_sha256": "6b4b77bfa6e2f0257be331aa3c8e4e649d77877200eebbfcc223e56874380e26",
+  "runtime_bytes": 152385,
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "processes": [
+    {
+      "fork": 1,
+      "wall_ms": 672.281666,
+      "max_rss_bytes": 103006208
+    },
+    {
+      "fork": 2,
+      "wall_ms": 658.602125,
+      "max_rss_bytes": 102940672
+    },
+    {
+      "fork": 3,
+      "wall_ms": 656.059292,
+      "max_rss_bytes": 103055360
+    }
+  ]
+}

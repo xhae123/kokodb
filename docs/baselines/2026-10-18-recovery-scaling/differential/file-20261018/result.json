@@ -1,0 +1,1 @@
+{"mode":"file","seed":20261018,"steps":1000,"attempted_statements":2863,"autocommit_statements":250,"committed_transactions":519,"rolled_back_transactions":234,"constraint_failures":194,"query_comparisons":35050,"reopens":61,"checkpoints":31,"final_rows":11}

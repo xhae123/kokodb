@@ -1,0 +1,24 @@
+[
+  {
+    "rows": 4000,
+    "observations": 9,
+    "wal_bytes": 403013,
+    "median_open_ms": 38.578,
+    "min_open_ms": 31.964,
+    "max_open_ms": 41.895,
+    "median_allocated_bytes": 16987344.0,
+    "min_allocated_bytes": 16828888.0,
+    "max_allocated_bytes": 17241688.0
+  },
+  {
+    "rows": 16000,
+    "observations": 9,
+    "wal_bytes": 1621013,
+    "median_open_ms": 92.253,
+    "min_open_ms": 87.656,
+    "max_open_ms": 103.516,
+    "median_allocated_bytes": 58765520.0,
+    "min_allocated_bytes": 57422416.0,
+    "max_allocated_bytes": 64627832.0
+  }
+]

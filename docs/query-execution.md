@@ -24,7 +24,7 @@ A table fork shares its immutable row snapshot and optional index. A value-only 
 
 Rows are stored in immutable arrays of up to 128 row references, with an outer array of block references. A point UPDATE copies the affected block and outer references, sharing other blocks. At 10,000 rows this copies at most 128 row references and 79 block references instead of 10,000 row references, excluding the replacement row and query objects. Append copies the last block and outer references; deletion repacks the affected tail. Bulk updates still scan all rows. The block size is an implementation choice, not an exhaustively tuned optimum.
 
-Indexes are not stored in snapshots or WALs. Recovered rows rebuild caches lazily using the same policy. INSERT uniqueness checks, primary-key assignment validation, WAL diff detection and recovery validation remain O(N). Point-update copying is O(128 + ceil(N/128)), not O(1). This adds no MVCC, general optimizer, or secondary-index API.
+Indexes are not stored in snapshots or WALs. Recovered rows rebuild query caches lazily using the same policy. A separate temporary recovery key set validates changed keys during WAL replay and is released before the handle is exposed. INSERT uniqueness checks, primary-key assignment validation and WAL diff detection remain O(N). Point-update copying is O(128 + ceil(N/128)), not O(1). This adds no MVCC, general optimizer, or secondary-index API.
 
 ## Measurement boundary
 
