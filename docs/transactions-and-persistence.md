@@ -193,6 +193,21 @@ A complete valid frame can survive a crash before the writer forced or acknowled
 - Compare recovered results with a reference model and exercise both clean and unclean shutdown. Passing a clean close/reopen test alone is insufficient.
 - Commit/recovery fault and subprocess gates run in the test suite. Real power-loss simulation, broader filesystem/JVM qualification, performance comparisons, publication, and compatibility guarantees remain release work. Storage format compatibility promises begin only at a documented release; development snapshots may reject older formats explicitly.
 
+### Systematic file-operation exceptions
+
+`StorageIOFailureTest` traces each injected file operation and fails before and after it, plus after partial appends. For each failure, it reopens the store, checks previously acknowledged contents and multi-table atomicity, performs a new commit and checkpoint, and reopens again. Failed open paths must release ownership; failed commit/checkpoint handles must reject further access until reopened.
+
+| Path | Injected failures |
+|---|---:|
+| Empty-store bootstrap | 22 |
+| Two-table commit | 5 |
+| Checkpoint | 18 |
+| Torn-tail recovery | 6 |
+| Legacy WAL migration | 22 |
+| Snapshot-covered stale WAL recovery | 22 |
+
+The current matrix passes 95 injected failures and six baseline paths, in addition to the process-termination tests. Appends, file force, atomic replacement and directory sync use real filesystem operations with injected exceptions around their effects. This does not discard OS/device caches or simulate physical power loss. Low-level reads, truncation itself, channel open/close and failed cleanup operations are not individually injected. A passing matrix does not establish coverage of those remaining failure mechanisms.
+
 ## Sources and alternatives
 
 - [SQLite atomic commit](https://www.sqlite.org/atomiccommit.html) explains durable-write ordering, recovery, and crash testing. Our row-splice WAL is a separate design, not SQLite's rollback-journal algorithm.
