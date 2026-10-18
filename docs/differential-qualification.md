@@ -27,3 +27,5 @@ The runner requires an empty output directory and retains environment, source/JA
 ## Limits
 
 Passing seeds are finite evidence, not a proof for all SQL or schedules. This checker does not cover concurrent access, arbitrary types, live queries, hardware power loss, or interrupted commits. Existing corruption, injected-I/O and child-process crash tests remain necessary. Qualification elapsed time measures the entire checked workload and must not be reported as query latency or engine throughput.
+
+[Retained qualification results](baselines/2026-10-18-differential-qualification/README.md) include per-run counts and exact artifact identities.
