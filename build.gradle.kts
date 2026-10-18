@@ -32,3 +32,10 @@ tasks.test {
     systemProperty("kokodb.test.classpath", sourceSets["test"].runtimeClasspath.asPath)
     systemProperty("kokodb.test.sqlPlugin", sqlCompilerJar.asFile)
 }
+
+tasks.register<JavaExec>("commitCostStudy") {
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("kokodb.storage.CommitCostStudy")
+    jvmArgs("-Xms64m", "-Xmx256m", "-XX:-UsePerfData")
+}

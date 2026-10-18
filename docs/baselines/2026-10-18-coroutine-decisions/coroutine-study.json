@@ -1,0 +1,161 @@
+[
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 1,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 1,
+    "completed": 1
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 1,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 1
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 10,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 10
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 10,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 10
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 100,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 100
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 100,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 100
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 1000,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 1000
+  },
+  {
+    "case": "admission",
+    "engine": "kokodb",
+    "callers": 1000,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 1000
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 1,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 1,
+    "completed": 1
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 1,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 1
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 10,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 10
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 10,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 10
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 100,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 100
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 100,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 100
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 1000,
+    "external_adapter": false,
+    "heartbeat_within_injected_100ms": false,
+    "app_threads_inside_blocking_call": 2,
+    "completed": 1000
+  },
+  {
+    "case": "admission",
+    "engine": "h2",
+    "callers": 1000,
+    "external_adapter": true,
+    "heartbeat_within_injected_100ms": true,
+    "app_threads_inside_blocking_call": 0,
+    "completed": 1000
+  },
+  {
+    "case": "cancel_before_mutex_admission",
+    "operation_executed": false
+  },
+  {
+    "case": "cancel_after_durable_commit",
+    "caller_cancelled": true,
+    "row_survives_reopen": true
+  },
+  {
+    "case": "flow_of_materialized_results",
+    "constructed_models": 10000,
+    "consumed_models": 1,
+    "true_snapshot_streaming": false
+  }
+]
