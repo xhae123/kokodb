@@ -12,6 +12,24 @@ internal class RowBlocks private constructor(
         return blocks[index / BLOCK_SIZE][index % BLOCK_SIZE]
     }
 
+    override fun iterator(): Iterator<List<Value>> = object : Iterator<List<Value>> {
+        private var block = 0
+        private var offset = 0
+
+        override fun hasNext(): Boolean = block < blocks.size
+
+        override fun next(): List<Value> {
+            if (!hasNext()) throw NoSuchElementException()
+            val values = blocks[block]
+            val row = values[offset++]
+            if (offset == values.size) {
+                block++
+                offset = 0
+            }
+            return row
+        }
+    }
+
     fun appended(row: List<Value>): RowBlocks {
         if (size == Int.MAX_VALUE) throw DatabaseException("Table row limit reached")
         val next = if (size % BLOCK_SIZE == 0) {
