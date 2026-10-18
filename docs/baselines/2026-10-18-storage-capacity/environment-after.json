@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+    "-Xms64m",
+    "-Xmx1g",
+    "-XX:-UsePerfData",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-storage-capacity:/Users/xhae000/Desktop/kokodb/build/libs/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.3.20/ed866de74ad3d49086a27bbd75952cd186479436/kotlin-stdlib-2.3.20.jar",
+    "CapacityProbe",
+    "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-18-storage-capacity/after/app.koko"
+  ],
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "runtime_sha256": "999fe9bd4bd2e9bdc99f2b597636ad9d983871971373920ce0b0308e966599a2",
+  "runtime_bytes": 146270
+}
