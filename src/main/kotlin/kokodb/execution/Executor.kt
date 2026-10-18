@@ -26,7 +26,7 @@ internal class Executor(private val catalog: Catalog) {
             if (key >= 0 && table.rows.any { it[key] == values[key] }) {
                 throw DatabaseException("Duplicate primary key for column '${table.columns[key].name}'")
             }
-            table.publishRows(table.rows + listOf(values))
+            table.publishRows(table.rows.appended(values))
             1
         }
         is Statement.Update -> {
@@ -41,29 +41,47 @@ internal class Executor(private val catalog: Catalog) {
                 index to value
             }
             val filter = statement.condition?.let { resolveFilter(table, it, params) }
-            var affected = 0
-            val rows = table.rows.map { row ->
-                if (matches(row, filter)) {
-                    affected++
-                    row.mapIndexed { index, value -> assignments[index] ?: value }
-                } else row
-            }
-            // Unchanged keys retain the uniqueness invariant of the committed row snapshot.
-            if (table.columns.indices.any { table.columns[it].primaryKey && it in assignments }) {
-                validateKeys(table, rows.asSequence())
-            }
-            table.publishRows(rows)
-            affected
+            update(table, assignments, filter)
         }
         is Statement.Delete -> {
             val table = catalog.table(statement.table)
             val filter = statement.condition?.let { resolveFilter(table, it, params) }
-            val rows = table.rows.filterNot { matches(it, filter) }
-            val affected = table.rows.size - rows.size
-            table.publishRows(rows)
-            affected
+            if (filter != null && filter.first == table.primaryKeyColumn) {
+                val index = table.findPrimaryKeyPosition(filter.second)
+                if (index < 0) 0 else {
+                    table.publishRows(table.rows.removed(index))
+                    1
+                }
+            } else {
+                val rows = if (filter == null) emptyList() else table.rows.filterNot { matches(it, filter) }
+                val affected = table.rows.size - rows.size
+                if (affected > 0) table.publishRows(rows)
+                affected
+            }
         }
         is Statement.Select -> throw DatabaseException("Use query() for SELECT")
+    }
+
+    private fun update(table: Table, assignments: Map<Int, Value>, filter: Pair<Int, Value>?): Int {
+        var affected = 0
+        fun replace(row: List<Value>): List<Value> = row.mapIndexed { index, value -> assignments[index] ?: value }
+        val rows = if (filter != null && filter.first == table.primaryKeyColumn) {
+            val index = table.findPrimaryKeyPosition(filter.second)
+            if (index < 0) return 0
+            affected = 1
+            table.rows.updated(index, replace(table.rows[index]))
+        } else table.rows.mapRows { row ->
+            if (matches(row, filter)) {
+                affected++
+                replace(row)
+            } else row
+        }
+        val keysChanged = table.primaryKeyColumn in assignments
+        if (keysChanged) {
+            validateKeys(table, rows.asSequence())
+            table.publishRows(rows)
+        } else table.publishValues(rows)
+        return affected
     }
 
     fun query(statement: Statement, params: Map<String, Any?>): List<Row> {

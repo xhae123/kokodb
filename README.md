@@ -229,7 +229,7 @@ Generated-code SPI adapters expose `readValues(ModelValues)` for direct mapping.
 - One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
 - DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
 
-Indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
+Secondary indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Repeated primary-key lookups use a bounded cache; other predicates scan. Point value UPDATE copies one immutable row block and the outer block references while preserving the key-position cache. INSERT uniqueness checks, primary-key assignments, tail deletion, WAL diff detection and recovery can still do table-sized work.
 
 The [primary-key validation measurements](docs/baselines/2026-10-08-constraint-validation/README.md) record an allocation reduction from 281.1 to 21.7 KiB per non-key UPDATE at 5,000 rows, with raw observations and interpretation limits.
 
