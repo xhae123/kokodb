@@ -57,3 +57,13 @@ The harness closes and reopens the database to time WAL replay, verifies every r
 Raw observations, medians/minima/maxima, fork logs, environment details and artifact/source hashes are retained. Files are created on the filesystem backing the operating system's temporary directory, reported in each fork log, and removed after that fork. Peak RSS includes the JVM and benchmark's WAL-reading buffers; it is not retained database heap.
 
 The fixed workload order and warmed filesystem/JVM affect timings. Storage synchronization depends on the OS/filesystem/device contract, and these measurements do not simulate hardware power loss. `storageSmoke` runs the same content/commit/checkpoint assertions at 10 rows in CI without timing thresholds. Fault injection and child-JVM termination remain separate correctness tests.
+
+## Point mutation recording
+
+After `./gradlew :benchmarks:installDist`, run:
+
+```sh
+python3 benchmarks/measure_mutations.py --java "$JAVA_HOME/bin/java" --runtime build/libs/kokodb-0.1.0-SNAPSHOT.jar --output benchmarks/results/mutations
+```
+
+The same harness can run against a prior compatible runtime JAR using `--runtime`. It populates/checkpoints 100, 1,000 and 10,000 rows, then records 20 separately committed non-key UPDATEs, 20 primary-key moves and 20 DELETEs. Every phase reopens and compares all rows against an independent map outside timing. Output includes WAL growth, per-operation batch time/allocation, reopen time, raw forks, runtime/harness hashes and JVM details. Three forks are the default. Fixed order and no dedicated per-operation warmup make these exploratory measurements; do not infer request percentiles or small latency wins. UPDATE/key-move tables keep their initial size; DELETE traverses a shrinking table. WAL reopen includes accumulated prior phases.

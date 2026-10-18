@@ -118,7 +118,7 @@ public final class DurabilityBenchmark {
         int count = 0;
         while (position < bytes.length) {
             int length = buffer.getInt(position + 4);
-            if (buffer.getInt(position) != 0x4b545831 || length < 36 || length > bytes.length - position
+            if (buffer.getInt(position) != 0x4b545832 || length < 36 || length > bytes.length - position
                 || buffer.getLong(position + 8) != ++sequence || buffer.getInt(position + 16) != length - 32
                 || buffer.getInt(position + length - 8) != 0x434d4954
                 || buffer.getInt(position + length - 4) != length) {
