@@ -30,4 +30,4 @@ Indexes are not stored in snapshots or WALs. Recovered rows rebuild caches lazil
 
 The point-query JMH suite returns complete Kotlin model lists from KoKoDB and H2 prepared statements with direct constructor mapping. It covers cycling hits, cycling misses, and UPDATE followed by a lookup. The last case measures mutation, cache reuse and result mapping together. Full-table model results are measured separately. All comparisons use memory mode, one caller, the same model values, and no durable acknowledgment claim.
 
-See the [retained measurements](baselines/2026-10-18-primary-key-lookup/README.md) for before/after/H2 results, allocation, cold-cache observations, artifact cost, and the unresolved UPDATE-then-read gap.
+The [initial lookup measurements](baselines/2026-10-18-primary-key-lookup/README.md) retain cold-cache observations and the mixed-write gap that motivated block storage. The [row-block measurements](baselines/2026-10-18-row-blocks/README.md) record the resulting point-write gain, full-model scan regression, allocation/artifact costs, and variable recovery observations. The tradeoff remains workload-specific.
