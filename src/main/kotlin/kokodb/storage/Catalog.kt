@@ -22,11 +22,6 @@ internal class Catalog {
 
     fun entries(): Map<String, Table> = tables.toMap()
 
-    fun restoreSplices(changes: Map<String, TableSplice>) {
-        val candidates = changes.mapValues { (name, splice) -> splice.apply(tables[name]) }
-        restore(candidates)
-    }
-
     fun restore(changes: Map<String, Table>) {
         for ((name, table) in changes) {
             val previous = tables[name]

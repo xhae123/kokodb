@@ -162,6 +162,8 @@ Independent persistent handles use `Database.open(path).use { db -> ... }`. Clos
 
 The [row-splice WAL measurements](docs/baselines/2026-10-18-wal-row-splices/README.md) compare identical transaction boundaries before and after the format change. For 1,000 separately committed INSERTs, WAL bytes fell from 6,972,995 to 96,890 and allocation per INSERT from 173,581.5 to 8,565.2 bytes. Commit latency was effectively unchanged; every transaction still forces the WAL. The runtime JAR grew from 121,928 to 131,379 bytes without new runtime dependencies. Raw data, point UPDATE/DELETE results, limitations, and reproduction commands are retained.
 
+[Incremental recovery validation](docs/baselines/2026-10-18-recovery-scaling/README.md) avoids rebuilding the complete primary-key set for every WAL splice. In a controlled 16,000-INSERT replay fixture, median open time fell from 1,772.103 to 92.253 ms and cumulative thread allocation from 6.216 GB to 58.766 MB. The comparison uses warm measured opens against the prior KoKoDB runtime; it is not a cold-start or general engine-performance claim.
+
 ## Build setup
 
 Requires JDK 17. The Gradle Wrapper downloads the pinned Gradle distribution on first use.

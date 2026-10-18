@@ -1,0 +1,1 @@
+{"mode":"memory","seed":31,"steps":1000,"attempted_statements":2819,"autocommit_statements":250,"committed_transactions":557,"rolled_back_transactions":196,"constraint_failures":165,"query_comparisons":34270,"reopens":0,"checkpoints":0,"final_rows":45}

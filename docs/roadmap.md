@@ -8,7 +8,7 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - CRUD supports non-null INT/TEXT columns, one optional caller-supplied primary key, projections and single equality predicates.
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
-- Correctness evidence includes 141 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, 95 injected I/O failures across six storage paths, and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- Correctness evidence includes 145 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, 95 injected I/O failures across six storage paths, and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
 - [Seeded differential qualification](differential-qualification.md) compares affected counts, contents, multi-table commit/rollback and file reopen/checkpoints against H2 and a separate map model. CI uses fixed bounded seeds; passing them does not establish exhaustive SQL correctness.
 - Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-block runtime baseline is 139.1 KiB; JVM and Kotlin dependencies are separate costs.
 
@@ -18,11 +18,12 @@ The product purpose explicitly concerns Kotlin applications. The [prepared H2 co
 
 ## Bound durable recording and continue storage qualification
 
-The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; diff detection and recovered key validation remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
+The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; diff detection remains O(N). Private recovery state validates changed keys incrementally and freezes tables only after successful validation of the complete WAL prefix. Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
 
 - Keep statement and transaction boundaries, force-before-acknowledgment, torn-tail checks, and recovery-required behavior intact.
 - [Checkpoint capacity qualification](baselines/2026-10-18-storage-capacity/README.md) reproduced accepted writes exceeding the snapshot limit. Commits now reject oversized growth before append; existing oversized version-2 catalogs retain an incremental shrinking path. Encoded-size accounting adds measured cost and does not establish a JVM heap bound.
 - Preserve six legacy-migration process-crash points alongside the existing nine commit/checkpoint boundaries, and mixed reference-model recovery tests.
+- [Recovery scaling qualification](baselines/2026-10-18-recovery-scaling/README.md) measures append-only replay and checks 5,000 mixed splices against the former immutable algorithm. Temporary replay key sets add working memory; this does not remove table-sized live INSERT validation or length-changing middle-splice costs.
 - Evaluate multiple edit ranges or stable row identities only when measured dispersed-write workloads justify the extra state and complexity.
 - Define checkpoint thresholds after measuring workload growth and failure behavior; retain explicit checkpoints and never reset WAL before the corresponding snapshot is durable.
 
