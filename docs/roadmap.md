@@ -8,21 +8,21 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - CRUD supports non-null INT/TEXT columns, one optional caller-supplied primary key, projections and single equality predicates.
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
-- Correctness evidence includes 111 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
-- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The runtime JAR is 119.1 KiB and contains no native archive entries; JVM and Kotlin dependencies are separate costs.
+- Correctness evidence includes 122 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-splice runtime baseline is 128.3 KiB; JVM and Kotlin dependencies are separate costs.
 
 See the [storage contract](transactions-and-persistence.md), [memory optimization evidence](baselines/2026-10-08-constraint-validation/README.md), and [durable measurements](baselines/2026-10-08-durable-storage/README.md) for exact scope and limitations.
 
 The product purpose explicitly concerns Kotlin applications. The [prepared H2 comparison](baselines/2026-10-08-kotlin-model-query/README.md) measures the cost of complete Kotlin model results, using direct manual construction on H2 and generated construction on KoKoDB. Generated mapping now reads validated stored values directly, eliminating per-result column maps and Row objects; its scope remains complete mapped models, not arbitrary DTOs. Optional [compile-time SQL validation](compile-time-sql-validation.md) is a separate build-time feature and does not change this runtime measurement.
 
-## Reduce repeated table recording before expanding SQL breadth
+## Bound durable recording and continue storage qualification
 
-The 1,000-row durable fixture wrote 6,972,995 WAL bytes under individual commits, compared with a 13,981-byte final snapshot. One transaction wrote only 13,961 WAL bytes, but requires a different acknowledgment/rollback boundary. The table after-image representation repeats state during both recording and recovery.
+The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; immutable row-list construction and diff detection remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
 
-- Evaluate row or page deltas with stable identities and an explicit format/version transition. Keep SQL replay and runtime object serialization out of the log.
-- Preserve full transaction recovery, schema validation, torn-tail handling and unknown-outcome behavior. Carry forward the same fault/termination matrix before accepting a new representation.
-- Measure WAL bytes, allocation, commit latency and replay time for both individual commits and grouped writes. Include UPDATE/DELETE and key changes rather than optimizing only append workloads.
-- Define checkpoint thresholds only after measuring workload growth and failure behavior; retain explicit checkpoints and never reset WAL before the corresponding snapshot is durable.
+- Keep statement and transaction boundaries, force-before-acknowledgment, torn-tail checks, and recovery-required behavior intact.
+- Preserve six legacy-migration process-crash points alongside the existing nine commit/checkpoint boundaries, and mixed reference-model recovery tests.
+- Evaluate multiple edit ranges or stable row identities only when measured dispersed-write workloads justify the extra state and complexity.
+- Define checkpoint thresholds after measuring workload growth and failure behavior; retain explicit checkpoints and never reset WAL before the corresponding snapshot is durable.
 
 ## Reduce scans while preserving atomic publication
 

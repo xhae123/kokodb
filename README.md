@@ -147,18 +147,18 @@ KoKoDB.close()
 ```
 
 - The parent directory must already exist. Initial support is Linux/macOS with APFS, ext4, or overlay filesystem types and functioning file force, atomic replacement, directory force, and OS locks. Other combinations fail explicitly. Network filesystems, aliases/hard links, live file renaming, and multiple owners are outside the supported contract.
-- A write outside a scope is an autocommit transaction. File commits append one checked multi-table after-image frame, force the WAL, publish memory state, then return success. No net change adds no frame.
+- A write outside a scope is an autocommit transaction. File commits append one checked multi-table row-splice frame, force the WAL, publish memory state, then return success. No net change adds no frame.
 - The database uses the chosen path plus `.wal` and `.lock` sidecars. Keep the pair together when closed; a missing/corrupt required file is an error, never an instruction to recreate empty data. Symbolic-link database/sidecar paths are rejected.
 - `checkpoint()` writes/forces a snapshot, atomically replaces it and syncs its directory, then installs a forced empty WAL. It is explicit: WAL grows until checkpointed. Closing releases ownership without requiring a checkpoint.
 - Restart validates versions, identities, checksums, sequence continuity, schemas, and keys before exposing state. A bounded incomplete terminal WAL frame is discarded; complete corruption fails open. Matching generated schemas are reused, missing model tables are durably created, and mismatches fail.
 - `CommitOutcomeUnknownException` means writing began but append/force failed. The transaction may be durable. Reads/writes/checkpoints then fail until close/reopen; retry only with application-level idempotency. A crash can also commit a transaction whose caller received no response.
-- Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Full dirty-table after-images amplify write volume. The entire working catalog must fit in JVM memory.
+- Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Point changes record the changed row region; dispersed edits in one transaction can still record intervening rows. The entire working catalog must fit in JVM memory.
 - Supported durability relies on the filesystem/device honoring synchronization. Tests inject I/O errors and terminate child JVMs at commit/checkpoint boundaries; they do not simulate hardware power loss.
-- The format is versioned, but cross-release compatibility is not promised before a documented release. Artifacts are not published yet.
+- Legacy version-1 WALs are validated and migrated through a checkpoint to version 2 during open; older binaries reject the new WAL. Broader cross-release compatibility is not promised before a documented release. Artifacts are not published yet.
 
 Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
 
-The [durable storage measurements](docs/baselines/2026-10-08-durable-storage/README.md) record commit, WAL, checkpoint and recovery costs. For 1,000 INSERTs, individual commits wrote about 6.97 MB of WAL versus 13.96 kB in one transaction. Batching changes acknowledgment and rollback boundaries; full-table after-images remain a measured limitation.
+The [row-splice WAL measurements](docs/baselines/2026-10-18-wal-row-splices/README.md) compare identical transaction boundaries before and after the format change. For 1,000 separately committed INSERTs, WAL bytes fell from 6,972,995 to 96,890 and allocation per INSERT from 173,581.5 to 8,565.2 bytes. Commit latency was effectively unchanged; every transaction still forces the WAL. The runtime JAR grew from 121,928 to 131,379 bytes without new runtime dependencies. Raw data, point UPDATE/DELETE results, limitations, and reproduction commands are retained.
 
 ## Build setup
 
@@ -232,7 +232,7 @@ Indexes, foreign keys, generated/composite keys, joins, and general-purpose resu
 
 The [primary-key validation measurements](docs/baselines/2026-10-08-constraint-validation/README.md) record an allocation reduction from 281.1 to 21.7 KiB per non-key UPDATE at 5,000 rows, with raw observations and interpretation limits.
 
-The [transaction and persistence design](docs/transactions-and-persistence.md) records transaction boundaries, binary snapshots, a table after-image WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
+The [transaction and persistence design](docs/transactions-and-persistence.md) records transaction boundaries, binary snapshots, a row-splice WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
 
 Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.
 

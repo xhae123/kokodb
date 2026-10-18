@@ -46,7 +46,8 @@ internal class FileStore private constructor(
         }
         if (dirty.isEmpty()) return
         if (sequence == Long.MAX_VALUE) throw DatabaseException("Commit sequence exhausted")
-        val frame = StorageCodec.encodeFrame(sequence + 1, dirty)
+        val changes = dirty.mapValues { (name, table) -> TableSplice.between(old[name], table) }
+        val frame = StorageCodec.encodeSpliceFrame(sequence + 1, changes)
         var started = false
         try {
             io.event(StoreEvent.BEFORE_APPEND)
@@ -92,14 +93,19 @@ internal class FileStore private constructor(
             if (previous == Long.MAX_VALUE) throw DatabaseException("WAL sequence overflow")
             val start = wal.position()
             val prefix = read(wal, minOf(StorageCodec.FRAME_PREFIX.toLong(), wal.size() - start).toInt())
-            val length = StorageCodec.frameLength(prefix, previous + 1)
+            val length = StorageCodec.frameLength(prefix, previous + 1, header.version)
             if (length == null || wal.size() - start < length) break
             val frame = ByteArray(length)
             prefix.copyInto(frame)
             read(wal, length - prefix.size).copyInto(frame, prefix.size)
-            val changes = StorageCodec.decodeFrame(frame, previous + 1)
+            if (header.version == 1) {
+                val changes = StorageCodec.decodeFrame(frame, previous + 1)
+                if (previous + 1 > snapshotSequence) catalog.restore(changes.entries())
+            } else {
+                val changes = StorageCodec.decodeSpliceFrame(frame, previous + 1)
+                if (previous + 1 > snapshotSequence) catalog.restoreSplices(changes)
+            }
             previous++
-            if (previous > snapshotSequence) catalog.restore(changes.entries())
             sequence = maxOf(sequence, previous)
             validEnd = wal.position()
         }
@@ -108,7 +114,8 @@ internal class FileStore private constructor(
             io.force(wal)
         }
         wal.position(validEnd)
-        if (header.base < snapshotSequence) checkpoint(catalog)
+        // Upgrade only after validating the entire legacy WAL; checkpoint ordering also protects migration.
+        if (header.base < snapshotSequence || header.version == 1) checkpoint(catalog)
         var removed = false
         Files.newDirectoryStream(path.parent, temporaryPrefix(path) + "*.tmp").use { files ->
             for (file in files) removed = Files.deleteIfExists(file) || removed

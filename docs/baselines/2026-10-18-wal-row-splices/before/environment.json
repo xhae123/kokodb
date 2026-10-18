@@ -1,0 +1,59 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "architecture": "arm64",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "command": [
+    "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+    "-XX:-UsePerfData",
+    "-Xms64m",
+    "-Xmx256m",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/benchmarks.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/benchmarks/build/install/benchmarks/lib/kotlin-stdlib-2.3.20.jar",
+    "benchmark.DurabilityBenchmark"
+  ],
+  "forks": 3,
+  "runtime_commit": "2d4cedebf45e7c7b19e96dd3ba3748312626710f",
+  "benchmark_source_sha256": "8d15346fad5993541db7351c9a9cf24baae449f778291dcd4799a1fb6080a758",
+  "jars": [
+    {
+      "name": "annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    },
+    {
+      "name": "benchmarks.jar",
+      "bytes": 10273,
+      "sha256": "8ee24ca84f2ee2d8f3737fd0a1b5e75f8539a1d69b5368625e2b2eeaf60489d2"
+    },
+    {
+      "name": "kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 121928,
+      "sha256": "c8a0be86094563c957dd2e0fe8a1ca9d4db69eec1b3cbbf03d11566e405c80f4"
+    },
+    {
+      "name": "kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+    }
+  ],
+  "processes": [
+    {
+      "fork": 1,
+      "wall_ms": 19639.393625,
+      "max_rss_bytes": 137412608,
+      "configuration": "# java=17.0.20.1,filesystem=apfs,flags=[-XX:-UsePerfData, -Xms64m, -Xmx256m]"
+    },
+    {
+      "fork": 2,
+      "wall_ms": 18963.059709,
+      "max_rss_bytes": 154451968,
+      "configuration": "# java=17.0.20.1,filesystem=apfs,flags=[-XX:-UsePerfData, -Xms64m, -Xmx256m]"
+    },
+    {
+      "fork": 3,
+      "wall_ms": 20141.63825,
+      "max_rss_bytes": 131743744,
+      "configuration": "# java=17.0.20.1,filesystem=apfs,flags=[-XX:-UsePerfData, -Xms64m, -Xmx256m]"
+    }
+  ]
+}

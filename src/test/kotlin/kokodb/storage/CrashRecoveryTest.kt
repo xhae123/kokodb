@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -19,9 +20,10 @@ internal object CrashProcess {
             val rejected = failure is DatabaseException && failure.message?.contains("locked by another process") == true
             kotlin.system.exitProcess(if (rejected) 0 else 1)
         }
-        val boundary = StoreEvent.valueOf(args[1])
+        val migration = args[1].startsWith("MIGRATE_")
+        val boundary = StoreEvent.valueOf(args[1].removePrefix("MIGRATE_"))
         val io = object : StoreIO() {
-            var armed = false
+            var armed = migration
             override fun event(event: StoreEvent) {
                 if (armed && event == boundary) Runtime.getRuntime().halt(91)
             }
@@ -99,6 +101,26 @@ class CrashRecoveryTest {
     }
 
     @Test
+    fun `process termination during legacy migration preserves acknowledged data`() {
+        for (boundary in StoreEvent.entries.filter { it.name.startsWith("SNAPSHOT_") || it.name.startsWith("WAL_RESET_") }) {
+            val path = directory.resolve("migration-$boundary.koko")
+            val wal = path.resolveSibling(path.fileName.toString() + ".wal")
+            val identity = UUID(18, 26)
+            Files.write(path, StorageCodec.encodeSnapshot(Snapshot(identity, 0, Catalog())))
+            Files.write(wal, StorageCodec.encodeWalHeader(WalHeader(identity, 0, 1)) +
+                StorageCodec.encodeFrame(1, SpliceRecoveryTest.legacyCatalog().entries()))
+            val (exit, log) = child(path, "MIGRATE_$boundary")
+            assertEquals(91, exit, "$boundary: $log")
+            Database.open(path).use { db ->
+                assertEquals("legacy", db.query("SELECT * FROM legacy").single().getString("name"))
+                assertEquals(2, StorageCodec.decodeWalHeader(Files.readAllBytes(wal).copyOf(40)).version)
+                db("INSERT INTO legacy VALUES (2, 'After migration')")
+            }
+            Database.open(path).use { db -> assertEquals(2, db.query("SELECT * FROM legacy").size) }
+        }
+    }
+
+    @Test
     fun `lifetime ownership excludes another JVM`() {
         val path = directory.resolve("app.koko")
         Database.open(path).use { assertEquals(0, child(path, "lock").first) }
@@ -112,7 +134,8 @@ class CrashRecoveryTest {
         val snapshot = StorageCodec.decodeSnapshot(Files.readAllBytes(source))
         val changed = snapshot.catalog.table("first").fork()
         changed.publishRows(listOf(listOf(Value.IntValue(1), Value.TextValue("Candidate"))))
-        val frame = StorageCodec.encodeFrame(snapshot.sequence + 1, mapOf("first" to changed))
+        val frame = StorageCodec.encodeSpliceFrame(snapshot.sequence + 1,
+            mapOf("first" to TableSplice.between(snapshot.catalog.table("first"), changed)))
         val header = Files.readAllBytes(directory.resolve("source.koko.wal"))
         for (length in 0 until frame.size) {
             val path = directory.resolve("torn-$length.koko")

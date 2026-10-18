@@ -1,6 +1,6 @@
 # Transactions and Persistence Design
 
-Status: implemented development alpha. Memory SQL CRUD, synchronous transactions, version-one codecs, forced WAL commits, explicit checkpoints, ownership locks, and restart recovery are implemented. Release/platform compatibility gates remain explicit below.
+Status: implemented development alpha. Memory SQL CRUD, synchronous transactions, version-one snapshots, version-two row-splice WALs, forced WAL commits, explicit checkpoints, ownership locks, and restart recovery are implemented. Release/platform compatibility gates remain explicit below.
 
 ## Goal and initial scope
 
@@ -44,11 +44,12 @@ Persistent mode uses `KoKoDB.open(path)` before SQL calls. Its parent directory 
 
 ## Storage choice
 
-Use a versioned binary snapshot plus an append-only transaction WAL containing table after-images. An after-image includes each dirty table's full schema and rows at commit time, not SQL text or runtime Kotlin objects.
+Use a versioned binary snapshot plus an append-only transaction WAL containing row splices. Each changed table contributes its schema, expected predecessor row count, unchanged prefix length, removed row count, and replacement rows. Positions refer to the immediately preceding committed table state, independently of primary-key values.
 
-- SQL replay would depend on parser versions and statement semantics. After-images describe the resulting state directly and make recovery idempotent.
-- One WAL frame contains all dirty table after-images in a transaction, including new table schemas. Its final commit trailer is the transaction boundary.
-- Full table after-images are simple and appropriate for an initial small database, but cost O(size of changed tables) in encoding and WAL space. Later row/page deltas require a separately versioned format and compatibility plan.
+- SQL replay would depend on parser versions and statement semantics. Splices store resolved relational values. Recovery applies a transaction exactly once in sequence after its checkpoint, rather than executing SQL again.
+- One frame contains all changed tables, including newly created tables. Its commit trailer is the transaction boundary. Recovery constructs and validates every candidate table before publishing any of them.
+- A point INSERT, UPDATE, or DELETE records only its changed rows plus bounded table/frame metadata. Diff detection, candidate row-list construction, and recovered key validation remain O(N). A transaction with dispersed edits can record unchanged rows between its first and last edit; this is not a general minimal-delta algorithm.
+- Keyless duplicate rows and primary-key changes need no persistent surrogate row identifier. Row order is an internal encoding invariant, not a SELECT ordering guarantee.
 - Checkpoints write the complete committed catalog and then reset the WAL. They bound WAL growth without changing transaction semantics.
 - Java object serialization and Kotlin class names are not part of the durable data representation. Storage contains relational names, types, keys, and primitive values.
 
@@ -67,7 +68,7 @@ Use a versioned binary snapshot plus an append-only transaction WAL containing t
 - All replacement files are created in the database directory. File synchronization, atomic replacement, and parent-directory synchronization are mandatory capabilities; persistent open fails when the platform adapter cannot provide the required operations. There is no silent best-effort durability mode.
 - Network filesystems are outside the initial support claim. Platform support must be backed by fault and recovery tests; memory mode remains independent of these capabilities.
 
-## Binary format, version 1
+## Binary formats: snapshot 1.0 and WAL 2.0
 
 All numeric fields use fixed-width big-endian encoding. Commit sequences are supported from zero through Long.MAX_VALUE; values with the unsigned high bit set are rejected, and sequence exhaustion must fail before writing. Every length-prefixed name uses an unsigned 32-bit byte length. Names are normalized ASCII SQL identifiers; text values preserve exact case and use strict UTF-8. Malformed UTF-16 surrogate sequences are rejected before any WAL append, not silently replaced.
 
@@ -96,10 +97,18 @@ Payload:
 ### WAL
 
 - The checksummed WAL header contains eight-byte magic `KOKOWAL1`, two unsigned 16-bit major/minor values, the 16-byte database UUID, an unsigned 64-bit base commit sequence, and unsigned 32-bit CRC32C over those preceding fields.
-- Each frame contains: four-byte magic `KTX1`, unsigned 32-bit total frame length, unsigned 64-bit commit sequence, unsigned 32-bit payload length, a payload using the snapshot table-count/table encoding for dirty table after-images, CRC32C over the frame prefix/payload, four-byte trailer `CMIT`, and repeated total frame length.
+- The eight-byte header magic stays `KOKOWAL1`; the major/minor fields select the payload format. Current writes use version 2.0. Version 1.0 is read for migration only.
+- Each version-2 frame contains: four-byte magic `KTX2`, unsigned 32-bit total frame length, unsigned 64-bit commit sequence, unsigned 32-bit payload length, the splice payload, CRC32C over the frame prefix/payload, four-byte trailer `CMIT`, and repeated total frame length.
+- A splice payload begins with a 32-bit table count. Each table has its name and ordered schema using snapshot encoding, signed 32-bit predecessor row count (`-1` means a new table), 32-bit unchanged prefix count, 32-bit removed count, then replacement row count and rows using snapshot encoding.
+- Non-creation predecessor counts, prefix/removal counts and replacement counts must be nonnegative. Prefix plus removed count cannot exceed the predecessor count; creations require zero prefix/removal. Result row counts cannot overflow. Replayed tables must match the expected schema and predecessor count, and their complete resulting primary keys must be unique.
+- Version-1 `KTX1` frames contain complete dirty tables using the snapshot table-count/table encoding. Their decoding and corruption checks remain supported.
 - Frame sequences must increase exactly by one from the WAL base. No SQL strings, caller parameters, model names, or generated adapter names are logged.
 - The initial hard bounds are 64 MiB per WAL frame and 256 MiB per snapshot, with bounded field/table/row counts derived from the remaining bytes. Check bounds before allocation, and reject unsupported versions/tags, invalid UTF-8, semantic errors and trailing bytes before publication.
 - CRC32C detects accidental corruption; it is not authentication. Unsupported future major/minor formats are rejected rather than guessed or overwritten.
+
+### Legacy migration
+
+Opening a version-1 WAL validates all complete frames and recovers its committed state before any format upgrade. The existing checkpoint protocol then installs a version-1 snapshot at the recovered sequence and a version-2 empty WAL. Interrupted migration is recovered using the same snapshot/WAL ordering rules, including a newer snapshot with the older WAL. An invalid legacy file is rejected before replacement. Migration performs writes during open; older binaries reject the resulting version-2 WAL, so retaining a closed-file backup is required for a downgrade. This is a specific supported development-format transition, not a promise to read arbitrary future formats.
 
 ## Persistent commit protocol
 
@@ -119,7 +128,7 @@ sequenceDiagram
     participant WAL as WAL file
     participant State as Committed catalog
     App->>Tx: Execute writes and validate
-    Tx->>WAL: Append complete after-image frame and commit trailer
+    Tx->>WAL: Append complete row-splice frame and commit trailer
     Tx->>WAL: force(true)
     WAL-->>Tx: Durable recording succeeded
     Tx->>State: Publish catalog reference
@@ -151,9 +160,9 @@ Failed checkpoints before WAL reset retain the WAL needed for recovery. Ambiguou
 2. If neither authoritative file exists, install/force the empty WAL and sync its directory before installing/forcing the empty snapshot and syncing again. WAL-first bootstrap allows completing initialization only when a snapshot is absent and the WAL is exactly a valid sequence-zero header. A snapshot with a missing WAL always fails: an empty sequence-zero snapshot can also belong to a live database whose committed rows were entirely in the missing WAL.
 3. Validate the snapshot header, UUID, version, lengths, checksums, schema, and rows into a temporary catalog. A corrupt snapshot is an explicit error; do not recreate an empty database.
 4. Validate the WAL header and identity. Its base may be older than or equal to the snapshot sequence; a newer base means required history is missing and opening fails.
-5. Scan frames in strict sequence. Validate all complete frames, even ones covered by the snapshot. Replay frames newer than the snapshot by replacing the dirty table after-images in a private recovered catalog.
+5. Scan frames in strict sequence. Validate framing, checksums, schemas, encoded values, and splice bounds in all complete frames, even ones covered by the snapshot. Replay only frames newer than the snapshot against their actual predecessor state, verifying predecessor counts and complete resulting keys in a private catalog. Covered splices cannot be applied to a newer snapshot; the snapshot supplies the already-committed state.
 6. A physically incomplete terminal frame whose complete prefix fields have valid bounded framing has no complete commit trailer and is ignored as an uncommitted tail. Complete checksum/trailer failures, bad headers, sequence gaps, or corruption within the prefix fail opening; do not scan past them searching for a later record.
-7. Only after the whole valid prefix is checked, truncate/force an ignored incomplete tail before allowing new appends, or perform a safe checkpoint when the WAL predates the snapshot. Do not repair a file during read-only validation.
+7. Only after the whole valid prefix is checked, truncate/force an ignored incomplete tail before allowing new appends, or perform a safe checkpoint when the WAL predates the snapshot or uses version 1. Do not repair a file during read-only validation.
 8. Reconcile generated models: reuse exactly matching persisted schemas; a mismatch fails open. Missing generated tables are created through the normal commit protocol. Do not silently drop/recreate persisted tables.
 9. Publish the recovered committed catalog and expose the handle.
 
@@ -183,7 +192,7 @@ A complete valid frame can survive a crash before the writer forced or acknowled
 
 ## Sources and alternatives
 
-- [SQLite atomic commit](https://www.sqlite.org/atomiccommit.html) explains durable-write ordering, recovery, and crash testing. Our after-image WAL is a separate design, not SQLite's rollback-journal algorithm.
+- [SQLite atomic commit](https://www.sqlite.org/atomiccommit.html) explains durable-write ordering, recovery, and crash testing. Our row-splice WAL is a separate design, not SQLite's rollback-journal algorithm.
 - [SQLite WAL](https://www.sqlite.org/wal.html) documents the distinction between commit recording and checkpointing.
 - [Java 17 FileChannel](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/channels/FileChannel.html) defines force/write/locking behavior and its platform constraints.
 - Snapshot-only atomic replacement is simpler but rewrites the entire database on every commit and requires the same file/directory ordering guarantees.

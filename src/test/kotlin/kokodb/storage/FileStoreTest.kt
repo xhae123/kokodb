@@ -235,7 +235,7 @@ class FileStoreTest {
         initialize()
         Database.open(path).use { it.checkpoint() }
         val snapshot = StorageCodec.decodeSnapshot(Files.readAllBytes(path))
-        val bytes = Files.readAllBytes(wal) + StorageCodec.encodeFrame(snapshot.sequence + 2, snapshot.catalog.entries())
+        val bytes = Files.readAllBytes(wal) + StorageCodec.encodeSpliceFrame(snapshot.sequence + 2, snapshot.catalog.entries().mapValues { (_, table) -> TableSplice.between(null, table) })
         Files.write(wal, bytes)
         assertFailsWith<DatabaseException> { Database.open(path) }
         assertContentEquals(bytes, Files.readAllBytes(wal))
