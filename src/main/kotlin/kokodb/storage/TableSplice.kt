@@ -9,24 +9,6 @@ internal data class TableSplice(
     val removed: Int,
     val inserted: List<List<Value>>,
 ) {
-    fun apply(previous: Table?): Table {
-        if (baseRows == -1) {
-            if (previous != null) throw DatabaseException("Invalid storage: created table already exists")
-        } else if (previous == null || previous.rows.size != baseRows || previous.columns != columns) {
-            throw DatabaseException("Invalid storage: splice predecessor mismatch")
-        }
-        val old = previous?.rows ?: RowBlocks.from(emptyList())
-        val rows = old.spliced(prefix, removed, inserted)
-        val key = columns.indexOfFirst { it.primaryKey }
-        if (key >= 0) {
-            val seen = HashSet<Value>()
-            for (row in rows) {
-                if (!seen.add(row[key])) throw DatabaseException("Invalid storage: duplicate primary key")
-            }
-        }
-        return Table(columns).also { it.publishRows(rows) }
-    }
-
     companion object {
         fun between(previous: Table?, next: Table): TableSplice {
             if (previous == null) return TableSplice(next.columns, -1, 0, 0, next.rows)

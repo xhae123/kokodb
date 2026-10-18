@@ -91,7 +91,7 @@ internal class FileStore private constructor(
     }
 
     private fun recover() {
-        val catalog = checkNotNull(recovered)
+        val replay = RecoveryCatalog(checkNotNull(recovered))
         wal = FileChannel.open(walPath, READ, WRITE)
         val header = StorageCodec.decodeWalHeader(read(wal, StorageCodec.WAL_HEADER))
         if (header.identity != identity || header.base > sequence) throw DatabaseException("Snapshot and WAL identity/history mismatch")
@@ -109,15 +109,17 @@ internal class FileStore private constructor(
             read(wal, length - prefix.size).copyInto(frame, prefix.size)
             if (header.version == 1) {
                 val changes = StorageCodec.decodeFrame(frame, previous + 1)
-                if (previous + 1 > snapshotSequence) catalog.restore(changes.entries())
+                if (previous + 1 > snapshotSequence) replay.applyTables(changes.entries())
             } else {
                 val changes = StorageCodec.decodeSpliceFrame(frame, previous + 1)
-                if (previous + 1 > snapshotSequence) catalog.restoreSplices(changes)
+                if (previous + 1 > snapshotSequence) replay.applySplices(changes)
             }
             previous++
             sequence = maxOf(sequence, previous)
             validEnd = wal.position()
         }
+        val catalog = replay.finish()
+        recovered = catalog
         if (validEnd < wal.size()) {
             wal.truncate(validEnd)
             io.force(wal)
