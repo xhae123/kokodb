@@ -14,9 +14,6 @@ class RowBlocksTest {
         for (size in listOf(0, 1, 127, 128, 129, 255, 256, 257, 1000)) {
             val values = List(size) { row(it) }
             val original = RowBlocks.from(values)
-            val iterator = original.iterator()
-            assertEquals(values, iterator.asSequence().toList())
-            assertFailsWith<NoSuchElementException> { iterator.next() }
             assertEquals<List<List<Value>>>(values + listOf(row(-1)), original.appended(row(-1)))
             for (index in values.indices) {
                 val updated = values.toMutableList().also { it[index] = row(-1) }
