@@ -156,6 +156,7 @@ KoKoDB.close()
 - Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Point changes record the changed row region; dispersed edits in one transaction can still record intervening rows. The entire working catalog must fit in JVM memory.
 - Supported durability relies on the filesystem/device honoring synchronization. Tests inject I/O errors and terminate child JVMs at commit/checkpoint boundaries; they do not simulate hardware power loss.
 - Legacy version-1 WALs are validated and migrated through a checkpoint to version 2 during open; older binaries reject the new WAL. Broader cross-release compatibility is not promised before a documented release. Artifacts are not published yet.
+- File commits reject growth beyond the 256 MiB encoded snapshot limit before writing WAL or publishing rows. Transactions must also fit the 64 MiB WAL frame limit. These are encoded-data limits, not heap-size guarantees; see the [storage contract](docs/transactions-and-persistence.md) for recovery of oversized files written by earlier development versions.
 
 Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
 

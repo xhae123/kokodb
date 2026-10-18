@@ -21,11 +21,13 @@ internal class FileStore private constructor(
     private val owner: Owner,
     snapshot: Snapshot,
     private val io: StoreIO,
+    private val maxSnapshotBytes: Int,
 ) : AutoCloseable {
     private var recovered: Catalog? = snapshot.catalog
     private val identity = snapshot.identity
     private var sequence = snapshot.sequence
     private var recoveryRequired = false
+    private var snapshotBytes = 0L
     private var closed = false
     private lateinit var wal: FileChannel
     private val walPath = path.resolveSibling(path.fileName.toString() + ".wal")
@@ -47,6 +49,11 @@ internal class FileStore private constructor(
         if (dirty.isEmpty()) return
         if (sequence == Long.MAX_VALUE) throw DatabaseException("Commit sequence exhausted")
         val changes = dirty.mapValues { (name, table) -> TableSplice.between(old[name], table) }
+        val nextSnapshotBytes = SnapshotSize.after(snapshotBytes, old, changes)
+        // Older writers could exceed this bound; allow strictly shrinking commits to repair those stores.
+        if (nextSnapshotBytes > maxSnapshotBytes && nextSnapshotBytes >= snapshotBytes) {
+            throw DatabaseException("Commit exceeds snapshot size limit ($maxSnapshotBytes bytes)")
+        }
         val frame = StorageCodec.encodeSpliceFrame(sequence + 1, changes)
         var started = false
         try {
@@ -57,6 +64,7 @@ internal class FileStore private constructor(
             io.force(wal)
             io.event(StoreEvent.AFTER_WAL_FORCE)
             sequence++
+            snapshotBytes = nextSnapshotBytes
         } catch (error: Throwable) {
             if (started) {
                 recoveryRequired = true
@@ -68,6 +76,7 @@ internal class FileStore private constructor(
 
     fun checkpoint(catalog: Catalog) {
         requireHealthy()
+        if (snapshotBytes > maxSnapshotBytes) throw DatabaseException("Snapshot exceeds size limit ($maxSnapshotBytes bytes)")
         val bytes = StorageCodec.encodeSnapshot(Snapshot(identity, sequence, catalog))
         try {
             writeReplacement(path, bytes, snapshot = true)
@@ -114,6 +123,7 @@ internal class FileStore private constructor(
             io.force(wal)
         }
         wal.position(validEnd)
+        snapshotBytes = SnapshotSize.of(catalog)
         // Upgrade only after validating the entire legacy WAL; checkpoint ordering also protects migration.
         if (header.base < snapshotSequence || header.version == 1) checkpoint(catalog)
         var removed = false
@@ -159,15 +169,16 @@ internal class FileStore private constructor(
     companion object {
         private val owners = ConcurrentHashMap<Path, Any>()
 
-        fun open(input: Path, io: StoreIO = StoreIO()): FileStore = try {
-            openOwned(input, io)
+        fun open(input: Path, io: StoreIO = StoreIO(), maxSnapshotBytes: Int = StorageCodec.MAX_SNAPSHOT): FileStore = try {
+            require(maxSnapshotBytes in (StorageCodec.SNAPSHOT_HEADER + 4)..StorageCodec.MAX_SNAPSHOT)
+            openOwned(input, io, maxSnapshotBytes)
         } catch (error: DatabaseException) {
             throw error
         } catch (error: Exception) {
             throw DatabaseException("Unable to open persistent database").also { it.initCause(error) }
         }
 
-        private fun openOwned(input: Path, io: StoreIO): FileStore {
+        private fun openOwned(input: Path, io: StoreIO, maxSnapshotBytes: Int): FileStore {
             val absolute = input.toAbsolutePath().normalize()
             if (absolute.fileName == null) throw DatabaseException("Database path must name a file")
             val path = absolute.parent.toRealPath().resolve(absolute.fileName)
@@ -191,7 +202,7 @@ internal class FileStore private constructor(
                 io.force(channel)
                 io.syncDirectory(path.parent)
                 val snapshot = initializeOrRead(path, wal, io)
-                store = FileStore(path, owner, snapshot, io)
+                store = FileStore(path, owner, snapshot, io, maxSnapshotBytes)
                 store.recover()
                 return store
             } catch (error: Throwable) {

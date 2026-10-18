@@ -12,6 +12,7 @@ import kokodb.storage.Column
 import kokodb.storage.DataType
 import kokodb.storage.FileStore
 import kokodb.storage.StoreIO
+import kokodb.storage.StorageCodec
 import java.nio.file.Path
 import java.util.ServiceLoader
 
@@ -149,8 +150,8 @@ class Database private constructor(classLoader: ClassLoader, private val store: 
             classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
         ): Database = open(path, classLoader, StoreIO())
 
-        internal fun open(path: Path, classLoader: ClassLoader, io: StoreIO): Database {
-            val store = FileStore.open(path, io)
+        internal fun open(path: Path, classLoader: ClassLoader, io: StoreIO, maxSnapshotBytes: Int = StorageCodec.MAX_SNAPSHOT): Database {
+            val store = FileStore.open(path, io, maxSnapshotBytes)
             return try { Database(classLoader, store) } catch (error: Throwable) {
                 runCatching { store.close() }.exceptionOrNull()?.let(error::addSuppressed)
                 throw error
