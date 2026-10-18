@@ -1,28 +1,33 @@
 package kokodb.storage
 
-internal data class Column(val name: String, val type: DataType, val primaryKey: Boolean = false)
-
 internal class Table private constructor(val columns: List<Column>, private var snapshot: RowSnapshot) {
-    constructor(columns: List<Column>) : this(columns, RowSnapshot(emptyList()))
+    constructor(columns: List<Column>) : this(columns, RowSnapshot(RowBlocks.from(emptyList())))
 
     val primaryKeyColumn = columns.indexOfFirst { it.primaryKey }
-    val rows: List<List<Value>> get() = snapshot.rows
+    val rows: RowBlocks get() = snapshot.rows
 
-    // The lookup cache belongs to exactly one immutable row snapshot, including across transaction forks.
     fun publishRows(rows: List<List<Value>>) {
-        if (rows !== snapshot.rows) snapshot = RowSnapshot(rows)
+        if (rows !== snapshot.rows) snapshot = RowSnapshot(RowBlocks.from(rows))
     }
 
-    fun findPrimaryKey(value: Value): List<Value>? = snapshot.find(primaryKeyColumn, value)
+    // Only callers proving unchanged keys and row positions may carry this cache across value updates.
+    fun publishValues(rows: RowBlocks) {
+        check(rows.size == snapshot.rows.size)
+        if (rows !== snapshot.rows) snapshot = RowSnapshot(rows, snapshot)
+    }
+
+    fun findPrimaryKeyPosition(value: Value): Int = snapshot.findPosition(primaryKeyColumn, value)
+
+    fun findPrimaryKey(value: Value): List<Value>? = rows.getOrNull(findPrimaryKeyPosition(value))
 
     fun fork(): Table = Table(columns, snapshot)
 
-    private class RowSnapshot(val rows: List<List<Value>>) {
-        private var queried = false
-        private var indexAllowed = rows.size in 32..(MAX_SLOTS * 3 / 4)
-        private var positions: IntArray? = null
+    private class RowSnapshot(val rows: RowBlocks, previous: RowSnapshot? = null) {
+        private var queried: Boolean = previous?.queried ?: false
+        private var indexAllowed: Boolean = previous?.indexAllowed ?: (rows.size in 32..(MAX_SLOTS * 3 / 4))
+        private var positions: IntArray? = previous?.positions
 
-        fun find(key: Int, value: Value): List<Value>? {
+        fun findPosition(key: Int, value: Value): Int {
             var index = positions
             if (index == null && indexAllowed && queried) {
                 index = build(key)
@@ -30,14 +35,14 @@ internal class Table private constructor(val columns: List<Column>, private var 
                 if (index == null) indexAllowed = false
             }
             queried = true
-            if (index == null) return rows.firstOrNull { it[key] == value }
+            if (index == null) return rows.indexOfFirst { it[key] == value }
             var slot = hash(value) and (index.size - 1)
             while (index[slot] != 0) {
                 val row = rows[index[slot] - 1]
-                if (row[key] == value) return row
+                if (row[key] == value) return index[slot] - 1
                 slot = (slot + 1) and (index.size - 1)
             }
-            return null
+            return -1
         }
 
         private fun build(key: Int): IntArray? {

@@ -15,11 +15,8 @@ internal data class TableSplice(
         } else if (previous == null || previous.rows.size != baseRows || previous.columns != columns) {
             throw DatabaseException("Invalid storage: splice predecessor mismatch")
         }
-        val old = previous?.rows ?: emptyList()
-        val rows = ArrayList<List<Value>>(old.size - removed + inserted.size)
-        rows.addAll(old.subList(0, prefix))
-        rows.addAll(inserted)
-        rows.addAll(old.subList(prefix + removed, old.size))
+        val old = previous?.rows ?: RowBlocks.from(emptyList())
+        val rows = old.spliced(prefix, removed, inserted)
         val key = columns.indexOfFirst { it.primaryKey }
         if (key >= 0) {
             val seen = HashSet<Value>()

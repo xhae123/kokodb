@@ -25,7 +25,7 @@ KoKoDB.transaction {
 ```
 
 - A write outside an explicit transaction is one atomic statement. In file mode, INSERT, UPDATE, DELETE, and CREATE TABLE use the same autocommit machinery; memory mode needs no WAL.
-- Beginning a transaction forks the committed catalog into private table wrappers, sharing immutable row lists. Writes replace lists in that private catalog; commit publishes its DatabaseState reference.
+- Beginning a transaction forks the committed catalog into private table wrappers, sharing immutable row blocks. Writes replace affected blocks in that private catalog; commit publishes its DatabaseState reference. Point value updates share unchanged blocks and retain key-position caches only when keys and positions are unchanged.
 - Reads inside the scope see the overlay, including that transaction's own writes. Other KoKoDB callers wait for its facade lock and see the committed catalog after it finishes. Independent Database instances require sequential use by their caller.
 - Commit publishes one catalog reference, covering all table changes together. Memory transactions publish after validation; persistent transactions publish only after the WAL force succeeds.
 - Returning normally commits. A thrown exception discards the overlay. Any SQL validation, execution, or result-mapping error marks the transaction rollback-only even if the callback catches it; normal callback completion then throws a transaction-aborted error instead of committing earlier writes.
@@ -48,7 +48,7 @@ Use a versioned binary snapshot plus an append-only transaction WAL containing r
 
 - SQL replay would depend on parser versions and statement semantics. Splices store resolved relational values. Recovery applies a transaction exactly once in sequence after its checkpoint, rather than executing SQL again.
 - One frame contains all changed tables, including newly created tables. Its commit trailer is the transaction boundary. Recovery constructs and validates every candidate table before publishing any of them.
-- A point INSERT, UPDATE, or DELETE records only its changed rows plus bounded table/frame metadata. Diff detection, candidate row-list construction, and recovered key validation remain O(N). A transaction with dispersed edits can record unchanged rows between its first and last edit; this is not a general minimal-delta algorithm.
+- A point INSERT, UPDATE, or DELETE records only its changed rows plus bounded table/frame metadata. Diff detection and recovered key validation remain O(N); point UPDATE copies one row block and the outer block references. A transaction with dispersed edits can record unchanged rows between its first and last edit; this is not a general minimal-delta algorithm.
 - Keyless duplicate rows and primary-key changes need no persistent surrogate row identifier. Row order is an internal encoding invariant, not a SELECT ordering guarantee.
 - Checkpoints write the complete committed catalog and then reset the WAL. They bound WAL growth without changing transaction semantics.
 - Java object serialization and Kotlin class names are not part of the durable data representation. Storage contains relational names, types, keys, and primitive values.

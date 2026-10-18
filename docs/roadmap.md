@@ -8,8 +8,8 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - CRUD supports non-null INT/TEXT columns, one optional caller-supplied primary key, projections and single equality predicates.
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
-- Correctness evidence includes 128 tests, codec corruption/truncation checks, reference-map CRUD, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
-- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-splice runtime baseline is 128.3 KiB; JVM and Kotlin dependencies are separate costs.
+- Correctness evidence includes 134 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-block runtime baseline is 139.1 KiB; JVM and Kotlin dependencies are separate costs.
 
 See the [storage contract](transactions-and-persistence.md), [memory optimization evidence](baselines/2026-10-08-constraint-validation/README.md), and [durable measurements](baselines/2026-10-08-durable-storage/README.md) for exact scope and limitations.
 
@@ -17,7 +17,7 @@ The product purpose explicitly concerns Kotlin applications. The [prepared H2 co
 
 ## Bound durable recording and continue storage qualification
 
-The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; immutable row-list construction and diff detection remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
+The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) reduced 1,000 individual INSERTs from 6,972,995 to 96,890 recorded bytes. Version-2 WAL frames encode row splices instead of full dirty tables. Point changes record replacement rows and table/frame metadata; diff detection and recovered key validation remain O(N). Dispersed edits may still record a larger interval. Version-1 files are validated and migrated through the checkpoint protocol during open.
 
 - Keep statement and transaction boundaries, force-before-acknowledgment, torn-tail checks, and recovery-required behavior intact.
 - Preserve six legacy-migration process-crash points alongside the existing nine commit/checkpoint boundaries, and mixed reference-model recovery tests.
@@ -26,10 +26,11 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 
 ## Preserve measured lookup gains while reducing mutation costs
 
-[Primary-key equality lookups](query-execution.md) now build a compact position cache only after repeated reads of an unchanged sufficiently large snapshot. Forks share a cache only with its matching immutable rows; mutation and recovery retain the original atomicity rules.
+[Primary-key equality lookups](query-execution.md) build a compact position cache only after repeated lookups with unchanged keys and positions. Immutable row blocks reduce point-update copies, and value-only UPDATE retains the matching key-position cache. Mutation and recovery retain the original atomicity rules.
 
 - Point-query comparisons include hits, misses, and UPDATE-then-read against the prior runtime and H2 prepared statements with direct Kotlin mapping.
-- Row-list replacement, diff detection, and primary-key mutation validation remain O(N). Indexing a read path does not solve those write costs.
+- The [row-block baseline](baselines/2026-10-18-row-blocks/README.md) reduces the 10,000-row memory UPDATE/read mean from 103.148 to 1.422 us, while full 1,000-model materialization grows from 7.157 to 8.003 us. Recovery observations vary substantially even for an unchanged baseline; no recovery speedup is claimed.
+- Tail deletion, diff detection, INSERT uniqueness checks, and primary-key mutation validation remain O(N). Block copying and cache reuse do not remove these costs.
 - First-read/index-build latency, large-table cache bounds, and adversarial collision fallback must remain explicit when interpreting warm repeated-read results.
 
 ## Qualify a release using explicit costs and guarantees

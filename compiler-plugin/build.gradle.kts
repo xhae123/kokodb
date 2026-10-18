@@ -16,7 +16,7 @@ kotlin {
         kotlin.srcDir(rootProject.file("src/main/kotlin"))
         kotlin.include(
             "kokodb/compiler/**", "kokodb/sql/**", "kokodb/query/**",
-            "kokodb/storage/Table.kt", "kokodb/storage/Value.kt", "kokodb/DatabaseException.kt",
+            "kokodb/storage/Column.kt", "kokodb/storage/Value.kt", "kokodb/DatabaseException.kt",
         )
     }
 }

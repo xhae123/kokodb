@@ -50,7 +50,7 @@ No application database wrapper, service class, repository declaration, or manua
 - SELECT must use the model's table and include each stored property exactly once, or use `*`. Column order may differ from constructor order. Wrong tables, incomplete/duplicate projections, incompatible schemas, and invalid parameters fail even when no rows match.
 - Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
 - `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before INSERT or UPDATE changes any rows. A key is not required for typed queries.
-- Repeated primary-key equality queries use a bounded, lazy snapshot lookup cache. First reads, small tables, and non-key predicates retain scans; [execution details and memory limits](docs/query-execution.md) explain the tradeoffs. The [point-query comparison](docs/baselines/2026-10-18-primary-key-lookup/README.md) includes both the repeated-read gain and the remaining mixed-write gap against H2.
+- Repeated primary-key equality queries use a bounded, lazy snapshot lookup cache. First reads, small tables, and non-key predicates retain scans; [execution details and memory limits](docs/query-execution.md) explain the tradeoffs. [Immutable row-block measurements](docs/baselines/2026-10-18-row-blocks/README.md) cover the point-write improvement, full-scan cost, and recovery timing uncertainty against the prior runtime and prepared H2.
 - SQL identifiers are case-insensitive. String values and parameter names remain case-sensitive. Parameters bind Int/String values; null and implicit type conversion are unsupported.
 - The optional SQL compiler plugin checks static SQL syntax and query/write call categories during Kotlin/JVM compilation. Dynamic SQL and stored schemas remain validated at execution time; Kotlin result assignment checks are separate.
 - Mutating a returned model does not write to the database. There is no automatic dirty checking.
@@ -229,7 +229,7 @@ Generated-code SPI adapters expose `readValues(ModelValues)` for direct mapping.
 - One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
 - DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
 
-Indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Lookups and primary-key checks currently scan rows. UPDATE/DELETE build replacement row lists; writes may copy table-sized state.
+Secondary indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Repeated primary-key lookups use a bounded cache; other predicates scan. Point value UPDATE copies one immutable row block and the outer block references while preserving the key-position cache. INSERT uniqueness checks, primary-key assignments, tail deletion, WAL diff detection and recovery can still do table-sized work.
 
 The [primary-key validation measurements](docs/baselines/2026-10-08-constraint-validation/README.md) record an allocation reduction from 281.1 to 21.7 KiB per non-key UPDATE at 5,000 rows, with raw observations and interpretation limits.
 

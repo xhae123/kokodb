@@ -13,6 +13,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 @DbTable("indexed_entries")
 data class IndexEntry(@Id val id: Int, val name: String)
@@ -120,6 +121,24 @@ class PrimaryKeyLookupTest {
     }
 
     @Test
+    fun `value only updates retain positions while preserving earlier snapshot values`() {
+        val table = Table(listOf(Column("id", DataType.INT, true), Column("name", DataType.TEXT)))
+        table.publishRows(List(1000) { listOf(Value.IntValue(it), Value.TextValue("old")) })
+        repeat(2) { table.findPrimaryKey(Value.IntValue(500)) }
+        val index = assertNotNull(positions(table))
+        val fork = table.fork()
+        fork.publishValues(fork.rows.updated(500, listOf(Value.IntValue(500), Value.TextValue("new"))))
+        assertSame(index, positions(fork))
+        assertEquals(Value.TextValue("new"), fork.findPrimaryKey(Value.IntValue(500))!![1])
+        assertEquals(Value.TextValue("old"), table.findPrimaryKey(Value.IntValue(500))!![1])
+        fork.publishRows(fork.rows.updated(500, listOf(Value.IntValue(1500), Value.TextValue("moved"))))
+        assertNull(positions(fork))
+        assertNull(fork.findPrimaryKey(Value.IntValue(500)))
+        assertNotNull(fork.findPrimaryKey(Value.IntValue(1500)))
+        assertSame(index, positions(table))
+    }
+
+    @Test
     fun `tiny snapshots and adversarial builds remain scan based`() {
         val tiny = Table(listOf(Column("id", DataType.INT, true)))
         tiny.publishRows(listOf(listOf(Value.IntValue(Int.MIN_VALUE)), listOf(Value.IntValue(Int.MAX_VALUE))))
@@ -143,8 +162,13 @@ class PrimaryKeyLookupTest {
                 return listOf(Value.IntValue(index))
             }
         })
+        assertEquals(table.rows.size, visited)
+        val allocation = java.lang.management.ManagementFactory.getThreadMXBean() as? com.sun.management.ThreadMXBean
+        val measured = allocation?.takeIf { it.isThreadAllocatedMemorySupported }
+        if (measured != null && !measured.isThreadAllocatedMemoryEnabled) measured.isThreadAllocatedMemoryEnabled = true
+        val before = measured?.getThreadAllocatedBytes(Thread.currentThread().id)
         repeat(3) { assertEquals(listOf(Value.IntValue(0)), table.findPrimaryKey(Value.IntValue(0))) }
-        assertEquals(3, visited)
+        if (before != null) assertTrue(measured.getThreadAllocatedBytes(Thread.currentThread().id) - before < 16384)
         assertNull(positions(table))
     }
 
