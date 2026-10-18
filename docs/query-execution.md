@@ -27,3 +27,5 @@ Indexes are not stored in snapshots or WALs. Recovered rows rebuild caches lazil
 ## Measurement boundary
 
 The point-query JMH suite returns complete Kotlin model lists from KoKoDB and H2 prepared statements with direct constructor mapping. It covers cycling hits, cycling misses, and UPDATE followed by a lookup. The last case exposes cache invalidation and the existing row-copy cost. Full-table model results are measured separately. All comparisons use memory mode, one caller, the same model values, and no durable acknowledgment claim.
+
+See the [retained measurements](baselines/2026-10-18-primary-key-lookup/README.md) for before/after/H2 results, allocation, cold-cache observations, artifact cost, and the unresolved UPDATE-then-read gap.

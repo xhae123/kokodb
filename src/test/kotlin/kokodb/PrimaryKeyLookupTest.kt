@@ -132,6 +132,22 @@ class PrimaryKeyLookupTest {
         assertNull(positions(colliding))
     }
 
+    @Test
+    fun `tables above the cache bound retain early exit scans`() {
+        val table = Table(listOf(Column("id", DataType.INT, true)))
+        var visited = 0
+        table.publishRows(object : AbstractList<List<Value>>() {
+            override val size = 786433
+            override fun get(index: Int): List<Value> {
+                visited++
+                return listOf(Value.IntValue(index))
+            }
+        })
+        repeat(3) { assertEquals(listOf(Value.IntValue(0)), table.findPrimaryKey(Value.IntValue(0))) }
+        assertEquals(3, visited)
+        assertNull(positions(table))
+    }
+
     private fun positions(table: Table): IntArray? {
         val snapshot = Table::class.java.getDeclaredField("snapshot").also { it.isAccessible = true }.get(table)
         return snapshot.javaClass.getDeclaredField("positions").also { it.isAccessible = true }.get(snapshot) as IntArray?

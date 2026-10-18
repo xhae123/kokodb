@@ -1,0 +1,54 @@
+{
+  "command": [
+    "/opt/homebrew/Cellar/openjdk@17/17.0.20.1/libexec/openjdk.jdk/Contents/Home/bin/java",
+    "-Xms64m",
+    "-Xmx256m",
+    "-XX:-UsePerfData",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/commons-math3-3.6.1.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/comparison.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/h2-2.5.252.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/jmh-core-1.37.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/jopt-simple-5.0.4.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar",
+    "comparison.IndexLifecycleProbe"
+  ],
+  "jars": [
+    {
+      "name": "annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    },
+    {
+      "name": "commons-math3-3.6.1.jar",
+      "bytes": 2213560,
+      "sha256": "1e56d7b058d28b65abd256b8458e3885b674c1d588fa43cd7d1cbb9c7ef2b308"
+    },
+    {
+      "name": "comparison.jar",
+      "bytes": 50441,
+      "sha256": "21de46d864854eb2488a022e230a16976f06138c0e8e15a22050bb6aab3a5968"
+    },
+    {
+      "name": "h2-2.5.252.jar",
+      "bytes": 2693360,
+      "sha256": "90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20"
+    },
+    {
+      "name": "jmh-core-1.37.jar",
+      "bytes": 552986,
+      "sha256": "dc0eaf2bbf0036a70b60798c785d6e03a9daf06b68b8edb0f1ba9eb3421baeb3"
+    },
+    {
+      "name": "jopt-simple-5.0.4.jar",
+      "bytes": 78146,
+      "sha256": "df26cc58f235f477db07f753ba5a3ab243ebe5789d9f89ecf68dd62ea9a66c28"
+    },
+    {
+      "name": "kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 135526,
+      "sha256": "f2f130bfe5aa82f020a2ce5b033de334c263cd4df045958a773b06497b5028fb"
+    },
+    {
+      "name": "kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+    }
+  ],
+  "probe_source_sha256": "b53ce4c42df4b21d38ff81095d2b08d72415d217d3f7259655d87302b351d461"
+}
