@@ -63,6 +63,29 @@ internal class RowBlocks private constructor(
         return if (changed) RowBlocks(next, size) else this
     }
 
+    fun spliced(prefix: Int, removed: Int, inserted: List<List<Value>>): RowBlocks {
+        require(prefix in 0..size && removed in 0..(size - prefix))
+        val nextSize = size.toLong() - removed + inserted.size
+        if (nextSize > Int.MAX_VALUE) throw DatabaseException("Table row limit reached")
+        if (removed == 0 && inserted.isEmpty()) return this
+        val next = Array(blockCount(nextSize.toInt())) { block ->
+            val start = block * BLOCK_SIZE
+            val length = minOf(BLOCK_SIZE, nextSize.toInt() - start)
+            val unchanged = start + length <= prefix || (removed == inserted.size && start >= prefix + inserted.size)
+            if (unchanged && blocks[block].size == length) {
+                blocks[block]
+            } else Array(length) { offset ->
+                val position = start + offset
+                when {
+                    position < prefix -> get(position)
+                    position - prefix < inserted.size -> inserted[position - prefix]
+                    else -> get(position - inserted.size + removed)
+                }
+            }
+        }
+        return RowBlocks(next, nextSize.toInt())
+    }
+
     companion object {
         private const val BLOCK_SIZE = 128
         private val empty = RowBlocks(emptyArray(), 0)

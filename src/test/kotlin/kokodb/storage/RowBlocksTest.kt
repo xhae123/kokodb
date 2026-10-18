@@ -72,6 +72,28 @@ class RowBlocksTest {
     }
 
     @Test
+    fun `splices agree with reference lists across shifted and aligned block boundaries`() {
+        val random = Random(301018)
+        var expected = List(300) { row(it) }
+        var actual = RowBlocks.from(expected)
+        repeat(3000) { step ->
+            val before = actual
+            val expectedBefore = expected
+            val prefix = random.nextInt(expected.size + 1)
+            val removed = random.nextInt(expected.size - prefix + 1)
+            val inserted = List(random.nextInt(260)) { row(-step - it) }
+            expected = expected.take(prefix) + inserted + expected.drop(prefix + removed)
+            actual = actual.spliced(prefix, removed, inserted)
+            assertEquals<List<List<Value>>>(expected, actual, "splice $step")
+            assertEquals<List<List<Value>>>(expected + listOf(row(step)), actual.appended(row(step)), "append after splice $step")
+            assertEquals<List<List<Value>>>(expectedBefore, before, "prior snapshot at $step")
+        }
+        assertSame(actual, actual.spliced(actual.size, 0, emptyList()))
+        assertFailsWith<IllegalArgumentException> { actual.spliced(-1, 0, emptyList()) }
+        assertFailsWith<IllegalArgumentException> { actual.spliced(actual.size, 1, emptyList()) }
+    }
+
+    @Test
     fun `invalid indices fail and input list mutation cannot alter stored blocks`() {
         val input = mutableListOf(row(1), row(2))
         val rows = RowBlocks.from(input)
