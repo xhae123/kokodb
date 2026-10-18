@@ -22,3 +22,9 @@ tasks.register<JavaExec>("smoke") {
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("comparison.Smoke")
 }
+
+tasks.register<JavaExec>("differential") {
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("comparison.DifferentialCheck")
+    jvmArgs("-Xms64m", "-Xmx256m", "-XX:-UsePerfData")
+}
