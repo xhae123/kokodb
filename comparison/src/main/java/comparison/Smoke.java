@@ -8,7 +8,12 @@ public final class Smoke {
                     fixture.verify();
                     fixture.verify();
                 }
-                System.out.println("Verified " + engine + " with " + rows + " Kotlin models");
+                try (var fixture = new PointFixture(engine, rows)) {
+                    fixture.verify();
+                    fixture.update(rows / 2, "updated");
+                    fixture.verify();
+                }
+                System.out.println("Verified " + engine + " with " + rows + " Kotlin models and point queries");
             }
         }
     }

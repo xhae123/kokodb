@@ -50,6 +50,7 @@ No application database wrapper, service class, repository declaration, or manua
 - SELECT must use the model's table and include each stored property exactly once, or use `*`. Column order may differ from constructor order. Wrong tables, incomplete/duplicate projections, incompatible schemas, and invalid parameters fail even when no rows match.
 - Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
 - `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before INSERT or UPDATE changes any rows. A key is not required for typed queries.
+- Repeated primary-key equality queries use a bounded, lazy snapshot lookup cache. First reads, small tables, and non-key predicates retain scans; [execution details and memory limits](docs/query-execution.md) explain the tradeoffs.
 - SQL identifiers are case-insensitive. String values and parameter names remain case-sensitive. Parameters bind Int/String values; null and implicit type conversion are unsupported.
 - The optional SQL compiler plugin checks static SQL syntax and query/write call categories during Kotlin/JVM compilation. Dynamic SQL and stored schemas remain validated at execution time; Kotlin result assignment checks are separate.
 - Mutating a returned model does not write to the database. There is no automatic dirty checking.
