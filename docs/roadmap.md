@@ -8,7 +8,7 @@ KoKoDB now has a complete path from SQL parsing to relational execution, generat
 - CRUD supports non-null INT/TEXT columns, one optional caller-supplied primary key, projections and single equality predicates.
 - Explicit synchronous transactions provide multi-table commit/rollback, read-own-writes and rollback-only behavior after caught database errors.
 - File mode uses bounded versioned snapshots and checksummed WAL frames, exclusive ownership and explicit checkpoints. Unknown commit outcomes require recovery.
-- Correctness evidence includes 140 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, injected I/O errors and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
+- Correctness evidence includes 141 tests, codec corruption/truncation checks, reference-map CRUD, immutable block boundaries and snapshot isolation, generated mapping and legacy-adapter contracts, 95 injected I/O failures across six storage paths, and child-JVM termination at nine commit/checkpoint boundaries. Linux/macOS CI also executes checked memory/storage/model workloads and a sample reopened in a second JVM.
 - [Seeded differential qualification](differential-qualification.md) compares affected counts, contents, multi-table commit/rollback and file reopen/checkpoints against H2 and a separate map model. CI uses fixed bounded seeds; passing them does not establish exhaustive SQL correctness.
 - Resource evidence includes artifact inventories, fresh-process startup/RSS, per-operation allocation, durable write volume and WAL/snapshot recovery. The row-block runtime baseline is 139.1 KiB; JVM and Kotlin dependencies are separate costs.
 
@@ -39,6 +39,7 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 
 - Define a first release's supported platforms, SQL subset, public API and cross-version storage compatibility. Migration behavior must be specified before promising older-file support.
 - Extend storage fault qualification beyond process termination where practical. State filesystem/device assumptions and distinguish hardware power loss from JVM termination.
+- The systematic I/O exception matrix covers append, force, replacement and directory sync, including partial appends. Qualifying reads, truncation, channel lifecycle, cleanup failures and loss of unforced filesystem state remains separate work; passing the matrix does not close those gaps.
 - Run a comparable established-engine workload with equivalent schema, transaction boundaries, synchronization, JVM settings and result materialization. Inventory native dependencies separately. Publish raw observations before claiming a deployment or performance advantage.
 - Establish repeatable benchmark methodology for smaller effects and distributions; current batches are exploratory and do not establish request percentiles or performance thresholds.
 - Complete release metadata and publishing setup. Keep unreleased examples usable from the sample checkout until artifacts are actually available.
