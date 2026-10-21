@@ -1,0 +1,3 @@
+Verified Gradle rejects malformed static SQL at Query.kt:5
+Verified corrected SQL compiles and KSP still generates the model adapter
+Verified compiler-plugin bytes invalidate an otherwise up-to-date compilation

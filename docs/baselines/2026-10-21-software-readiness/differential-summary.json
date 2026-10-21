@@ -1,0 +1,10 @@
+{
+  "runs": 12,
+  "attempted_statements": 76188,
+  "query_comparisons": 952340,
+  "reopens": 900,
+  "checkpoints": 450,
+  "committed_transactions": 16440,
+  "rolled_back_transactions": 6096,
+  "constraint_failures": 4918
+}
