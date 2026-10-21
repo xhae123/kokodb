@@ -1,0 +1,22 @@
+{
+  "os": "Darwin",
+  "os_version": "26.3",
+  "architecture": "arm64",
+  "filesystem": "apfs",
+  "base_commit": "3d9d5217e3f6b365b5c087fab1cd0021af4a5040",
+  "runtime_bytes": 152712,
+  "runtime_sha256": "ef0a31281c6f9151e9f995dbc8d62dfda6ba55b1b0f389c42758dce555f18597",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)",
+  "test_summary": {
+    "tests": 147,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_sha256": {
+    "src/main/kotlin/kokodb/storage/StoreIO.kt": "9f4f7f972b5b63f59b5dd0581b646ca50510bb1dbc791d03cbbd615f48ebb4a9",
+    "src/main/kotlin/kokodb/storage/FileStore.kt": "1bdc536b6354e09f85cba9fcf7835082bbc2bc183f492255b653b22cc784013b",
+    "src/test/kotlin/kokodb/storage/PersistenceModelIO.kt": "b7ac20b1aef7b792b6e495643970171067c53c29f334e3758232393f66b70624",
+    "src/test/kotlin/kokodb/storage/PersistenceOrderingTest.kt": "35e5391fd0f40c26e8aaa48a3e411d94f42c0c0860138c8d516771cec04f2398"
+  }
+}

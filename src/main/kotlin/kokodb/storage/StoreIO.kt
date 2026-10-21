@@ -3,6 +3,7 @@ package kokodb.storage
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -16,12 +17,18 @@ internal enum class StoreEvent {
 
 /** File operations are injectable so tests can fail or terminate at actual durability boundaries. */
 internal open class StoreIO {
+    open fun open(path: Path, vararg options: OpenOption): FileChannel = FileChannel.open(path, *options)
+
     open fun append(channel: FileChannel, bytes: ByteArray) {
         val buffer = ByteBuffer.wrap(bytes)
         while (buffer.hasRemaining()) channel.write(buffer)
     }
 
     open fun force(channel: FileChannel) = channel.force(true)
+
+    open fun truncate(channel: FileChannel, size: Long) {
+        channel.truncate(size)
+    }
 
     open fun replace(source: Path, target: Path) {
         Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING)
