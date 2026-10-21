@@ -1,0 +1,7 @@
+BOOTSTRAP: open, open, close, delete, open, close, delete, open, read-channel | 12 injected failures passed
+RECOVERY: open, read-file, open, read-channel, read-channel, read-channel | 10 injected failures passed
+TORN_TAIL: open, read-file, open, read-channel, read-channel, read-channel, read-channel, truncate | 14 injected failures passed
+CHECKPOINT: open, close, delete, open, close, delete, close, open | 10 injected failures passed
+CLOSE: close, close | 2 injected failures passed
+STALE_TEMP: open, read-file, open, read-channel, read-channel, read-channel, delete | 12 injected failures passed
+Storage lifecycle matrix: 60 injected failures and 6 baselines passed

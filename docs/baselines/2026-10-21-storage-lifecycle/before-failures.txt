@@ -1,0 +1,8 @@
+bootstrap cleanup preserves the original write failure()
+org.opentest4j.AssertionFailedError: expected: <java.io.IOException: Original append failure> but was: <java.io.IOException: Temporary cleanup failure>
+
+ownership close failure is suppressed on the original WAL close failure()
+org.opentest4j.AssertionFailedError: expected: <java.io.IOException: WAL close failed> but was: <java.io.IOException: Ownership close failed>
+
+checkpoint cleanup preserves the original write failure()
+org.opentest4j.AssertionFailedError: expected: <java.io.IOException: Original append failure> but was: <java.io.IOException: Temporary cleanup failure>

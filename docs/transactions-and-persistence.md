@@ -215,7 +215,15 @@ The mutable lists and key sets are temporary recovery working state, not persist
 | Legacy WAL migration | 22 |
 | Snapshot-covered stale WAL recovery | 22 |
 
-The current matrix passes 95 injected failures and six baseline paths, in addition to the process-termination tests. Appends, file force, atomic replacement and directory sync use real filesystem operations with injected exceptions around their effects. This does not discard OS/device caches or simulate physical power loss. Low-level reads, truncation itself, channel open/close and failed cleanup operations are not individually injected. A passing matrix does not establish coverage of those remaining failure mechanisms.
+The current matrix passes 95 injected failures and six baseline paths, in addition to the process-termination tests. Appends, file force, atomic replacement and directory sync use real filesystem operations with injected exceptions around their effects. This does not discard OS/device caches or simulate physical power loss. That original matrix does not individually inject reads, truncation, channel open/close or cleanup. The separate lifecycle matrix below covers selected failures in those operations.
+
+### Read, channel-lifecycle and cleanup failures
+
+`StorageLifecycleFailureTest` adds 60 single injected failures and six baselines: bootstrap (12), ordinary recovery (10), torn-tail repair (14), checkpoint (10), close (2), and stale temporary-file cleanup (12). Each path preserves acknowledged rows, permits ownership reacquisition, and supports another write, checkpoint and reopen. Failed checkpoint handles reject access; a failed close still invalidates the handle.
+
+Open failures are injected before acquisition. Reads, truncate and deletion fail before or after their effect. Close failures occur after the real channel is released; this checks exception handling and ownership bookkeeping without pretending to model an inaccessible leaked native descriptor. Directory-channel lifecycle inside `syncDirectory`, temporary-file creation, metadata/directory-enumeration failures and native close failures that leave resources unreleased remain separate boundaries.
+
+Three combined-failure regressions cover append plus temporary cleanup during bootstrap/checkpoint, and WAL close plus ownership-channel close. The initial operation's failure remains primary, with later cleanup failures attached as suppressed exceptions. Open/checkpoint wrappers preserve that primary cause; close propagates its first close error. This also applies when failed work leaves a temporary file for the next recovery to remove. [Raw traces and reproduction](baselines/2026-10-21-storage-lifecycle/README.md) retain the before-fix failures and qualified scope.
 
 ### Modeled loss of unforced state
 
