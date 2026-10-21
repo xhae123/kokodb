@@ -25,6 +25,8 @@ jobs:
       - run: ./gradlew build :sample:run :benchmarks:run --args=smoke :benchmarks:storageSmoke :comparison:smoke :comparison:differential
       - name: Reject malformed SQL in a Gradle consumer
         run: python3 compiler-plugin/check_gradle.py
+      - name: Qualify incremental model discovery across Gradle modules
+        run: python3 processor/check_gradle.py
       - name: Recover sample data in a second JVM
         run: |
           python3 - <<'PY'

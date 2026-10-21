@@ -1,0 +1,16 @@
+PASS initial: packaged providers and runtime queries
+PASS unchanged: packaged providers and runtime queries
+PASS change-field-type-order: packaged providers and runtime queries
+PASS rename-model-table-file: packaged providers and runtime queries
+PASS remove-one-model: packaged providers and runtime queries
+PASS duplicate-in-module: expected compilation diagnostic
+PASS recover-after-error: packaged providers and runtime queries
+PASS remove-all-annotations: packaged providers and runtime queries
+PASS remove-all-sources: packaged providers and runtime queries
+PASS restore-model: packaged providers and runtime queries
+PASS remove-last-source-directly: packaged providers and runtime queries
+PASS restore-after-no-sources: packaged providers and runtime queries
+PASS duplicate-across-modules: packaged providers and runtime queries
+PASS recover-cross-module-error: packaged providers and runtime queries
+PASS clean-equivalent: packaged providers and runtime queries
+Qualified 15 multi-module consumer states

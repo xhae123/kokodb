@@ -1,0 +1,10 @@
+{
+  "runtime": {
+    "path": "/Users/xhae000/Desktop/kokodb/build/libs/kokodb-0.1.0-SNAPSHOT.jar",
+    "sha256": "9b71923b86a01bd784f972125614ecb8eb21f486c8d48dadaa60b2d025f4b1b7"
+  },
+  "processor": {
+    "path": "/Users/xhae000/Desktop/kokodb/processor/build/libs/processor-0.1.0-SNAPSHOT.jar",
+    "sha256": "44ec3779feca6be4aceeaf2cd3d1c2d1569f86ff77f0bf30a4653071c1ecda88"
+  }
+}

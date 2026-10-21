@@ -187,7 +187,7 @@ dependencies {
 }
 ```
 
-Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library.
+Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library. The [multi-module consumer qualification](docs/baselines/2026-10-21-processor-consumer/README.md) checks packaged discovery through incremental model changes, renames, deletions and error recovery on the documented toolchain.
 
 The sample also enables the optional SQL compiler plugin, so `KoKoDB<User>("SELEC * FROM users")` fails its Kotlin build. It reuses the runtime parser and warns for dynamic SQL; it does not check schema existence, projections, or parameter maps. See [compile-time SQL validation](docs/compile-time-sql-validation.md) for consumer setup, qualified compiler versions, research, and exact coverage.
 

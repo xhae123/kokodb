@@ -1,0 +1,8 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "base_commit": "0f7b174208a91a28944a3577dec26d54c73f4fef",
+  "runner_sha256": "870fac41032ad0b758ef73d1f3107e6d1e219f0add98aead3f92076ce9f2468e",
+  "command": "python3 processor/check_gradle.py --output .local/improvements/2026-10-21-processor-consumer/qualified-run",
+  "qualification": "Kotlin 2.3.20; KSP 2.3.10; Gradle 9.2.1; JDK 17"
+}
