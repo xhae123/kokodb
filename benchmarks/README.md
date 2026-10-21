@@ -33,7 +33,7 @@ The CSV summaries are medians/minima/maxima of batch averages, not individual-re
 
 - These are exploratory workload baselines, not JMH results or performance promises. Small batches and fixed workload order can retain JIT/GC effects even after warmup; raw observations and separate forks expose some of that variation.
 - New JVM processes do not imply cold filesystem caches. Timings include process launch/exit; use the empty mode as context, not a precise subtraction of independently varying costs.
-- RSS is not retained database heap. It is unavailable on platforms without wait4; unsupported allocation instrumentation reports NaN. No GC-based retained-heap estimate is advertised.
+- RSS is not retained database heap. It is unavailable on platforms without wait4; unsupported allocation instrumentation reports NaN. The initial startup/workload suite does not advertise a GC-based retained-heap estimate; the separate INSERT study below records an explicitly approximate delta.
 - JVM options are fixed to `-Xms64m -Xmx256m -XX:-UsePerfData`. Record different options as a separate baseline. JDK/JVM binaries are excluded from JAR totals.
 - Runtime JAR bytes are incremental library payload. Kotlin stdlib may already be present in the consuming application. Benchmark/sample/processor bytes are separate costs; the processor is build-time only.
 - There is no transaction or disk-durability cost in the initial baseline. Comparing these figures with durable writes in another engine would be misleading.
@@ -67,3 +67,14 @@ python3 benchmarks/measure_mutations.py --java "$JAVA_HOME/bin/java" --runtime b
 ```
 
 The same harness can run against a prior compatible runtime JAR using `--runtime`. It populates/checkpoints 100, 1,000 and 10,000 rows, then records 20 separately committed non-key UPDATEs, 20 primary-key moves and 20 DELETEs. Every phase reopens and compares all rows against an independent map outside timing. Output includes WAL growth, per-operation batch time/allocation, reopen time, raw forks, runtime/harness hashes and JVM details. Three forks are the default. Fixed order and no dedicated per-operation warmup make these exploratory measurements; do not infer request percentiles or small latency wins. UPDATE/key-move tables keep their initial size; DELETE traverses a shrinking table. WAL reopen includes accumulated prior phases.
+
+## INSERT batch scaling
+
+```sh
+./gradlew :benchmarks:installDist
+python3 benchmarks/measure_inserts.py --java "$JAVA_HOME/bin/java" --runtime build/libs/kokodb-0.1.0-SNAPSHOT.jar --output benchmarks/results/inserts
+```
+
+This HotSpot/JDK 17 harness runs one transaction containing 1,000, 4,000 or 16,000 INSERTs, using deterministic non-monotonic INT or TEXT keys. Memory and durable file modes have identical SQL and transaction boundaries; file timing includes one commit force. Table creation is outside timing. Every row is verified afterward, and each file store is reopened and verified again.
+
+Three fresh JVM forks each perform four 1,000-row memory warmups per key type and three observations per configuration. Raw output includes transaction time, thread allocation, WAL size, and a forced-GC heap delta while the database remains live. That delta is an approximate JVM observation, not a precise retained-size calculation or a memory limit. Process RSS includes all fixtures, verification, JIT and recovery. Fixed order and limited warmup can distort timing; the separate three-fork `comparison.InsertBatchBenchmark` JMH workload qualifies warm memory INSERT time. Its setup and full-content verification run outside the timed operation. See the [recorded study](../docs/baselines/2026-10-21-insert-scaling/README.md) for both datasets and their limits.
