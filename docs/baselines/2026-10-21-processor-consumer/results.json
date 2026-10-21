@@ -1,0 +1,92 @@
+[
+  {
+    "case": "initial",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "unchanged",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "change-field-type-order",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "rename-model-table-file",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "remove-one-model",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "duplicate-in-module",
+    "expected_compile_error": "Duplicate @DbTable table name 'accounts'",
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "recover-after-error",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "remove-all-annotations",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "remove-all-sources",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "restore-model",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "remove-last-source-directly",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "restore-after-no-sources",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "duplicate-across-modules",
+    "expected_compile_error": null,
+    "expected_duplicate_table": "events",
+    "clean": false
+  },
+  {
+    "case": "recover-cross-module-error",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": false
+  },
+  {
+    "case": "clean-equivalent",
+    "expected_compile_error": null,
+    "expected_duplicate_table": null,
+    "clean": true
+  }
+]
