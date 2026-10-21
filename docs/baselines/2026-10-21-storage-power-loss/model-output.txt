@@ -1,0 +1,11 @@
+BOOTSTRAP: 4 unique crash images; trace=initial, force:empty, directory:ownership, append:wal:40, force:wal, replace:wal, directory:wal, append:snapshot:56, force:snapshot, replace:snapshot, directory:snapshot, acknowledged
+COMMIT: 198 unique crash images; trace=initial, force:empty, directory:ownership, append:wal:196, force:wal, acknowledged
+CHECKPOINT: 4 unique crash images; trace=initial, force:empty, directory:ownership, append:snapshot:189, force:snapshot, replace:snapshot, directory:snapshot, append:wal:40, force:wal, replace:wal, directory:wal, acknowledged
+TORN_TAIL: 3 unique crash images; trace=initial, force:empty, directory:ownership, truncate:233, force:wal, acknowledged
+LEGACY_MIGRATION: 4 unique crash images; trace=initial, force:empty, directory:ownership, append:snapshot:189, force:snapshot, replace:snapshot, directory:snapshot, append:wal:40, force:wal, replace:wal, directory:wal, acknowledged
+STALE_WAL: 3 unique crash images; trace=initial, force:empty, directory:ownership, append:snapshot:189, force:snapshot, replace:snapshot, directory:snapshot, append:wal:40, force:wal, replace:wal, directory:wal, acknowledged
+Persistence ordering: 216 crash images recovered, committed again and reopened
+Negative control COMMIT/WAL_FORCE detected: acknowledged: Lost an acknowledged commit ==> expected: <New> but was: <Old>
+Negative control CHECKPOINT/SNAPSHOT_FORCE detected: replace:snapshot: Invalid snapshot file size
+Negative control CHECKPOINT/SNAPSHOT_DIRECTORY detected: replace:wal: Snapshot and WAL identity/history mismatch
+Negative control BOOTSTRAP/WAL_DIRECTORY detected: replace:snapshot: Required WAL is missing

@@ -82,7 +82,7 @@ internal class FileStore private constructor(
             writeReplacement(path, bytes, snapshot = true)
             writeReplacement(walPath, StorageCodec.encodeWalHeader(WalHeader(identity, sequence)), snapshot = false)
             wal.close()
-            wal = FileChannel.open(walPath, READ, WRITE)
+            wal = io.open(walPath, READ, WRITE)
             wal.position(wal.size())
         } catch (error: Throwable) {
             recoveryRequired = true
@@ -92,7 +92,7 @@ internal class FileStore private constructor(
 
     private fun recover() {
         val replay = RecoveryCatalog(checkNotNull(recovered))
-        wal = FileChannel.open(walPath, READ, WRITE)
+        wal = io.open(walPath, READ, WRITE)
         val header = StorageCodec.decodeWalHeader(read(wal, StorageCodec.WAL_HEADER))
         if (header.identity != identity || header.base > sequence) throw DatabaseException("Snapshot and WAL identity/history mismatch")
         val snapshotSequence = sequence
@@ -121,7 +121,7 @@ internal class FileStore private constructor(
         val catalog = replay.finish()
         recovered = catalog
         if (validEnd < wal.size()) {
-            wal.truncate(validEnd)
+            io.truncate(wal, validEnd)
             io.force(wal)
         }
         wal.position(validEnd)
@@ -138,7 +138,7 @@ internal class FileStore private constructor(
     private fun writeReplacement(target: Path, bytes: ByteArray, snapshot: Boolean) {
         val temporary = Files.createTempFile(path.parent, temporaryPrefix(path), ".tmp")
         try {
-            FileChannel.open(temporary, WRITE).use {
+            io.open(temporary, WRITE).use {
                 io.append(it, bytes)
                 io.force(it)
                 io.event(if (snapshot) StoreEvent.SNAPSHOT_FORCED else StoreEvent.WAL_RESET_FORCED)
@@ -198,7 +198,7 @@ internal class FileStore private constructor(
             var owner: Owner? = null
             var store: FileStore? = null
             try {
-                channel = FileChannel.open(lockPath, CREATE, WRITE)
+                channel = io.open(lockPath, CREATE, WRITE)
                 val lock = channel.tryLock() ?: throw DatabaseException("Database is locked by another process")
                 owner = Owner(path, channel, lock, token)
                 io.force(channel)
@@ -239,7 +239,7 @@ internal class FileStore private constructor(
         private fun install(database: Path, target: Path, bytes: ByteArray, io: StoreIO) {
             val temporary = Files.createTempFile(database.parent, temporaryPrefix(database), ".tmp")
             try {
-                FileChannel.open(temporary, WRITE).use { io.append(it, bytes); io.force(it) }
+                io.open(temporary, WRITE).use { io.append(it, bytes); io.force(it) }
                 io.replace(temporary, target)
                 io.syncDirectory(database.parent)
             } finally { Files.deleteIfExists(temporary) }

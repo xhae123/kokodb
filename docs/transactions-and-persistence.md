@@ -199,7 +199,7 @@ The mutable lists and key sets are temporary recovery working state, not persist
 - At each injected crash point, reopen in a new process. A transaction must be fully present or absent, and every acknowledged transaction must be present.
 - Inject truncation at every position in a sample terminal frame, corruption in header/payload/trailer, unknown versions, UUID mismatches, missing sidecars, and sequence gaps.
 - Compare recovered results with a reference model and exercise both clean and unclean shutdown. Passing a clean close/reopen test alone is insufficient.
-- Commit/recovery fault and subprocess gates run in the test suite. Real power-loss simulation, broader filesystem/JVM qualification, performance comparisons, publication, and compatibility guarantees remain release work. Storage format compatibility promises begin only at a documented release; development snapshots may reject older formats explicitly.
+- Commit/recovery fault, modeled persistence-order and subprocess gates run in the test suite. Physical power-loss qualification, broader filesystem/JVM qualification, performance comparisons, publication, and compatibility guarantees remain separate work. Storage format compatibility promises begin only at a documented release; development snapshots may reject older formats explicitly.
 
 ### Systematic file-operation exceptions
 
@@ -215,6 +215,14 @@ The mutable lists and key sets are temporary recovery working state, not persist
 | Snapshot-covered stale WAL recovery | 22 |
 
 The current matrix passes 95 injected failures and six baseline paths, in addition to the process-termination tests. Appends, file force, atomic replacement and directory sync use real filesystem operations with injected exceptions around their effects. This does not discard OS/device caches or simulate physical power loss. Low-level reads, truncation itself, channel open/close and failed cleanup operations are not individually injected. A passing matrix does not establish coverage of those remaining failure mechanisms.
+
+### Modeled loss of unforced state
+
+`PersistenceOrderingTest` records the actual FileStore operations with a test-only persistence model. File contents and authoritative directory names have separate durable states. File force fixes the stored bytes; directory sync fixes the snapshot/WAL bindings. Before synchronization, the model independently retains or loses each replacement and enumerates every byte prefix of an append. Tail truncation may persist or be lost until forced.
+
+The six paths above produce 216 distinct crash images, including whether the tested operation has returned successfully. Each image is materialized in a separate directory and opened by the real recovery code. Verification checks previously acknowledged rows, complete multi-table writes and schema creation, further commits, checkpoints and another reopen. Four negative controls omit WAL force, snapshot force, snapshot directory sync or bootstrap WAL directory sync. Each must cause a detected data-loss or recovery failure.
+
+This model tests protocol ordering under explicit assumptions, not physical devices. It assumes successful barriers are honored, replacement of each authoritative name is atomic, and incomplete appends persist as prefixes. It does not enumerate reordered sectors within a file, garbage in an unforced append, damage to already-forced bytes, file/lock lifecycle failures, or stale temporary-file persistence. Complete corrupt WAL frames still fail closed under the documented corruption policy; the model does not qualify availability after such corruption. [Evidence and reproduction](baselines/2026-10-21-storage-power-loss/README.md) describe the model and its negative controls.
 
 ## Sources and alternatives
 
