@@ -36,7 +36,7 @@ KoKoDB.transaction {
 
 ## Mutation boundary
 
-- The CRUD executor resolves every assignment and predicate and checks types and duplicate assignments before publishing a table's row snapshot. INSERT checks the new key against existing rows; UPDATE validates the complete candidate key set when a primary-key column is assigned. Updates to other columns preserve the existing uniqueness invariant without rebuilding that set.
+- The CRUD executor resolves every assignment and predicate and checks types and duplicate assignments before publishing a table's row snapshot. INSERT checks the new key against the immutable append index when admitted, or against existing rows; UPDATE validates the complete candidate key set when a primary-key column is assigned. Updates to other columns preserve the existing uniqueness invariant without rebuilding that set.
 - The memory transaction implementation directs that same publication into its private catalog. A successful statement is not a durable commit while an explicit transaction remains open.
 - Existing SELECT results remain detached across updates, rollbacks, close, and reopen.
 

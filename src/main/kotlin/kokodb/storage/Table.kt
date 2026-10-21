@@ -1,10 +1,25 @@
 package kokodb.storage
 
+import kokodb.DatabaseException
+
 internal class Table private constructor(val columns: List<Column>, private var snapshot: RowSnapshot) {
     constructor(columns: List<Column>) : this(columns, RowSnapshot(RowBlocks.from(emptyList())))
 
     val primaryKeyColumn = columns.indexOfFirst { it.primaryKey }
     val rows: RowBlocks get() = snapshot.rows
+
+    fun append(row: List<Value>) {
+        val key = primaryKeyColumn
+        val index = if (key >= 0) snapshot.indexForAppend(key) else null
+        if (key >= 0 && (index?.find(row[key]) ?: rows.indexOfFirst { it[key] == row[key] }) >= 0) {
+            throw DatabaseException("Duplicate primary key for column '${columns[key].name}'")
+        }
+        val nextRows = rows.appended(row)
+        val next = RowSnapshot(nextRows)
+        next.appendStreak = minOf(2, snapshot.appendStreak + 1)
+        if (index != null && nextRows.size <= MAX_APPEND_KEYS) next.appendIndex = index.added(row[key], rows.size)
+        snapshot = next
+    }
 
     fun publishRows(rows: List<List<Value>>) {
         if (rows !== snapshot.rows) snapshot = RowSnapshot(RowBlocks.from(rows))
@@ -22,12 +37,28 @@ internal class Table private constructor(val columns: List<Column>, private var 
 
     fun fork(): Table = Table(columns, snapshot)
 
+    companion object {
+        // Bound optional tree retention; larger tables keep the existing scan/read-cache paths.
+        private const val MAX_APPEND_KEYS = 65536
+    }
+
     private class RowSnapshot(val rows: RowBlocks, previous: RowSnapshot? = null) {
+        var appendStreak: Int = previous?.appendStreak ?: 0
+        var appendIndex: PrimaryKeyIndex? = previous?.appendIndex
+
+        fun indexForAppend(key: Int): PrimaryKeyIndex? {
+            if (appendIndex == null && appendStreak >= 2 && rows.size in 32 until MAX_APPEND_KEYS) {
+                appendIndex = PrimaryKeyIndex.from(rows, key)
+            }
+            return appendIndex
+        }
+
         private var queried: Boolean = previous?.queried ?: false
         private var indexAllowed: Boolean = previous?.indexAllowed ?: (rows.size in 32..(MAX_SLOTS * 3 / 4))
         private var positions: IntArray? = previous?.positions
 
         fun findPosition(key: Int, value: Value): Int {
+            appendIndex?.let { return it.find(value) }
             var index = positions
             if (index == null && indexAllowed && queried) {
                 index = build(key)

@@ -5,7 +5,7 @@ import kotlin.Unit;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
-/** Exploratory first-read/build observations; steady-state comparisons belong to JMH. */
+/** Exploratory first and repeated lookup observations; steady-state comparisons belong to JMH. */
 public final class IndexLifecycleProbe {
     public static void main(String[] args) {
         var bean = ManagementFactory.getThreadMXBean();
@@ -20,7 +20,7 @@ public final class IndexLifecycleProbe {
                     return Unit.INSTANCE;
                 });
                 var params = Map.<String, Object>of("id", 5000);
-                for (String phase : new String[]{"first_scan", "build", "cached"}) {
+                for (String phase : new String[]{"first", "second", "third"}) {
                     long before = allocation == null ? 0 : allocation.getThreadAllocatedBytes(Thread.currentThread().getId());
                     long start = System.nanoTime();
                     var result = db.queryModels(BenchmarkUser.class, "SELECT id, name FROM benchmark_users WHERE id = :id", params);

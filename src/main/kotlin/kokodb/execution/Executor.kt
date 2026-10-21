@@ -22,11 +22,7 @@ internal class Executor(private val catalog: Catalog) {
         is Statement.Insert -> {
             val table = catalog.table(statement.table)
             val values = resolveRow(table, statement.values, params)
-            val key = table.columns.indexOfFirst { it.primaryKey }
-            if (key >= 0 && table.rows.any { it[key] == values[key] }) {
-                throw DatabaseException("Duplicate primary key for column '${table.columns[key].name}'")
-            }
-            table.publishRows(table.rows.appended(values))
+            table.append(values)
             1
         }
         is Statement.Update -> {

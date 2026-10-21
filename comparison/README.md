@@ -50,7 +50,7 @@ The point suite uses 1,000/10,000 rows, cycling hit/miss keys and a separate UPD
 
 Use `--runtime /path/to/older-kokodb.jar --engines kokodb` for an API-compatible old runtime with the exact same harness. `--rows 1000` narrows a run; it does not change the result contract. The default `--suite models` retains the full-table benchmark and its original five-iteration settings. `--quick` remains diagnostic only.
 
-`comparison.IndexLifecycleProbe` separately records the first scan, index-building lookup, and cached lookup on a 10,000-row database, with thread allocation and content checks. Run it from the installed comparison classpath. It discards two setup rounds and records three rounds, but its individual timing observations are exploratory and cannot replace forked JMH results or establish a tuned admission threshold.
+`comparison.IndexLifecycleProbe` separately records the first, second and third lookups on a populated 10,000-row database, with thread allocation and content checks. The append index may already exist after population; those phases do not imply a scan or an index build. Run it from the installed comparison classpath. It discards two setup rounds and records three rounds, but its individual timing observations are exploratory and cannot replace forked JMH results or establish a tuned admission threshold.
 
 ## Independent correctness qualification
 
@@ -66,3 +66,12 @@ python3 comparison/qualify.py --java "$JAVA_HOME/bin/java" --output .local/quali
 `./gradlew :comparison:coroutineStudy` runs controlled worker-admission, cancellation and eager-Flow checks. `./gradlew commitCostStudy` attributes append/force calls in the existing synchronous file path and verifies reopened contents. These optional studies support the [coroutine proposal decisions](../docs/coroutine-proposals.md); they are not integrated coroutine, snapshot-streaming or group-commit benchmarks.
 
 The comparison module includes kotlinx-coroutines-core 1.10.2 only for these diagnostics. The core dependency graph and public API are unchanged. Artificial scheduling windows are not CI performance gates; normal builds compile the study sources.
+
+## Warm INSERT transactions
+
+```sh
+./gradlew :comparison:installDist
+comparison/build/install/comparison/bin/comparison comparison.InsertBatchBenchmark -foe true -rf json -rff comparison/results/inserts.json
+```
+
+This KoKoDB-only JMH workload checks the warm memory INSERT path at 1,000 and 16,000 rows with INT/TEXT primary keys. It uses three JVM forks, three one-second warmups and three one-second measurement iterations. One measured operation is one transaction inserting the requested rows; table initialization and complete row verification occur outside timing on each invocation. It does not compare engine durability or claim H2 superiority. [The INSERT study](../docs/baselines/2026-10-21-insert-scaling/README.md) uses the same harness with before/after runtime JAR substitution and retains the artifacts and metadata. Thread allocation and approximate retained heap are recorded by the separate benchmark-module harness.

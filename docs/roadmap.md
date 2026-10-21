@@ -23,7 +23,7 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 - Keep statement and transaction boundaries, force-before-acknowledgment, torn-tail checks, and recovery-required behavior intact.
 - [Checkpoint capacity qualification](baselines/2026-10-18-storage-capacity/README.md) reproduced accepted writes exceeding the snapshot limit. Commits now reject oversized growth before append; existing oversized version-2 catalogs retain an incremental shrinking path. Encoded-size accounting adds measured cost and does not establish a JVM heap bound.
 - Preserve six legacy-migration process-crash points alongside the existing nine commit/checkpoint boundaries, and mixed reference-model recovery tests.
-- [Recovery scaling qualification](baselines/2026-10-18-recovery-scaling/README.md) measures append-only replay and checks 5,000 mixed splices against the former immutable algorithm. Temporary replay key sets add working memory; this does not remove table-sized live INSERT validation or length-changing middle-splice costs.
+- [Recovery scaling qualification](baselines/2026-10-18-recovery-scaling/README.md) measures append-only replay and checks 5,000 mixed splices against the former immutable algorithm. Temporary replay key sets add working memory; this does not remove length-changing middle-splice costs. [Live INSERT qualification](baselines/2026-10-21-insert-scaling/README.md) separately evaluates bounded persistent key indexes and their memory tradeoff.
 - Evaluate multiple edit ranges or stable row identities only when measured dispersed-write workloads justify the extra state and complexity.
 - Define checkpoint thresholds after measuring workload growth and failure behavior; retain explicit checkpoints and never reset WAL before the corresponding snapshot is durable.
 
@@ -33,7 +33,7 @@ The [measured version-2 WAL](baselines/2026-10-18-wal-row-splices/README.md) red
 
 - Point-query comparisons include hits, misses, and UPDATE-then-read against the prior runtime and H2 prepared statements with direct Kotlin mapping.
 - The [row-block baseline](baselines/2026-10-18-row-blocks/README.md) reduces the 10,000-row memory UPDATE/read mean from 103.148 to 1.422 us, while full 1,000-model materialization grows from 7.157 to 8.003 us. Recovery observations vary substantially even for an unchanged baseline; no recovery speedup is claimed.
-- Tail deletion, diff detection, INSERT uniqueness checks, and primary-key mutation validation remain O(N). Block copying and cache reuse do not remove these costs.
+- Tail deletion, diff detection, and primary-key mutation validation remain O(N). INSERT uniqueness uses a bounded immutable tree during sustained append workloads and otherwise retains its scan path. Block copying and cache reuse do not remove these costs.
 - First-read/index-build latency, large-table cache bounds, and adversarial collision fallback must remain explicit when interpreting warm repeated-read results.
 
 ## Qualify a release using explicit costs and guarantees
