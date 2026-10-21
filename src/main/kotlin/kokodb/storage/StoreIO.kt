@@ -19,6 +19,19 @@ internal enum class StoreEvent {
 internal open class StoreIO {
     open fun open(path: Path, vararg options: OpenOption): FileChannel = FileChannel.open(path, *options)
 
+    open fun read(channel: FileChannel, buffer: ByteBuffer): Int = channel.read(buffer)
+
+    open fun readAllBytes(path: Path): ByteArray = Files.readAllBytes(path)
+
+    open fun close(channel: FileChannel) = channel.close()
+
+    open fun deleteIfExists(path: Path): Boolean = Files.deleteIfExists(path)
+
+    fun <T> withChannel(path: Path, vararg options: OpenOption, block: (FileChannel) -> T): T {
+        val channel = open(path, *options)
+        return AutoCloseable { close(channel) }.use { block(channel) }
+    }
+
     open fun append(channel: FileChannel, bytes: ByteArray) {
         val buffer = ByteBuffer.wrap(bytes)
         while (buffer.hasRemaining()) channel.write(buffer)

@@ -1,0 +1,17 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "base_commit": "65bc3bc02b830e32689cebfec7c82fa5f1449023",
+  "tests": {
+    "tests": 159,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "runtime_bytes": 162619,
+  "runtime_sha256": "9b71923b86a01bd784f972125614ecb8eb21f486c8d48dadaa60b2d025f4b1b7",
+  "source_sha256": {
+    "src/main/kotlin/kokodb/storage/FileStore.kt": "4cda866ce0b651f42a8e6a784604ff34958e246a45dacb4f1abee7cbc2343437",
+    "src/main/kotlin/kokodb/storage/StoreIO.kt": "455ae44f15aa6bd76085f3e4dd66184049dbec2525df5ad22b4d917687f09781",
+    "src/test/kotlin/kokodb/storage/StorageLifecycleFailureTest.kt": "42bbf27fcfb2f7dc5203584c365d79d640ea4cce9ea70c85fe9942c692713fef"
+  }
+}

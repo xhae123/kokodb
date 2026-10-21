@@ -81,7 +81,7 @@ internal class FileStore private constructor(
         try {
             writeReplacement(path, bytes, snapshot = true)
             writeReplacement(walPath, StorageCodec.encodeWalHeader(WalHeader(identity, sequence)), snapshot = false)
-            wal.close()
+            io.close(wal)
             wal = io.open(walPath, READ, WRITE)
             wal.position(wal.size())
         } catch (error: Throwable) {
@@ -93,7 +93,7 @@ internal class FileStore private constructor(
     private fun recover() {
         val replay = RecoveryCatalog(checkNotNull(recovered))
         wal = io.open(walPath, READ, WRITE)
-        val header = StorageCodec.decodeWalHeader(read(wal, StorageCodec.WAL_HEADER))
+        val header = StorageCodec.decodeWalHeader(read(wal, StorageCodec.WAL_HEADER, io))
         if (header.identity != identity || header.base > sequence) throw DatabaseException("Snapshot and WAL identity/history mismatch")
         val snapshotSequence = sequence
         var previous = header.base
@@ -101,12 +101,12 @@ internal class FileStore private constructor(
         while (wal.position() < wal.size()) {
             if (previous == Long.MAX_VALUE) throw DatabaseException("WAL sequence overflow")
             val start = wal.position()
-            val prefix = read(wal, minOf(StorageCodec.FRAME_PREFIX.toLong(), wal.size() - start).toInt())
+            val prefix = read(wal, minOf(StorageCodec.FRAME_PREFIX.toLong(), wal.size() - start).toInt(), io)
             val length = StorageCodec.frameLength(prefix, previous + 1, header.version)
             if (length == null || wal.size() - start < length) break
             val frame = ByteArray(length)
             prefix.copyInto(frame)
-            read(wal, length - prefix.size).copyInto(frame, prefix.size)
+            read(wal, length - prefix.size, io).copyInto(frame, prefix.size)
             if (header.version == 1) {
                 val changes = StorageCodec.decodeFrame(frame, previous + 1)
                 if (previous + 1 > snapshotSequence) replay.applyTables(changes.entries())
@@ -130,15 +130,14 @@ internal class FileStore private constructor(
         if (header.base < snapshotSequence || header.version == 1) checkpoint(catalog)
         var removed = false
         Files.newDirectoryStream(path.parent, temporaryPrefix(path) + "*.tmp").use { files ->
-            for (file in files) removed = Files.deleteIfExists(file) || removed
+            for (file in files) removed = io.deleteIfExists(file) || removed
         }
         if (removed) io.syncDirectory(path.parent)
     }
 
     private fun writeReplacement(target: Path, bytes: ByteArray, snapshot: Boolean) {
-        val temporary = Files.createTempFile(path.parent, temporaryPrefix(path), ".tmp")
-        try {
-            io.open(temporary, WRITE).use {
+        withTemporary(path, io) { temporary ->
+            io.withChannel(temporary, WRITE) {
                 io.append(it, bytes)
                 io.force(it)
                 io.event(if (snapshot) StoreEvent.SNAPSHOT_FORCED else StoreEvent.WAL_RESET_FORCED)
@@ -147,24 +146,20 @@ internal class FileStore private constructor(
             io.event(if (snapshot) StoreEvent.SNAPSHOT_REPLACED else StoreEvent.WAL_RESET_REPLACED)
             io.syncDirectory(path.parent)
             io.event(if (snapshot) StoreEvent.SNAPSHOT_DIRECTORY_SYNCED else StoreEvent.WAL_RESET_DIRECTORY_SYNCED)
-        } finally {
-            Files.deleteIfExists(temporary)
         }
     }
 
     override fun close() {
         if (closed) return
         closed = true
-        try {
-            if (::wal.isInitialized) wal.close()
-        } finally {
-            owner.close()
+        owner.use {
+            if (::wal.isInitialized) io.close(wal)
         }
     }
 
-    private class Owner(val path: Path, val channel: FileChannel, val lock: FileLock, val token: Any) : AutoCloseable {
+    private class Owner(val path: Path, val channel: FileChannel, val lock: FileLock, val token: Any, val io: StoreIO) : AutoCloseable {
         override fun close() {
-            try { channel.close() } finally { owners.remove(path, token) }
+            try { io.close(channel) } finally { owners.remove(path, token) }
         }
     }
 
@@ -200,7 +195,7 @@ internal class FileStore private constructor(
             try {
                 channel = io.open(lockPath, CREATE, WRITE)
                 val lock = channel.tryLock() ?: throw DatabaseException("Database is locked by another process")
-                owner = Owner(path, channel, lock, token)
+                owner = Owner(path, channel, lock, token, io)
                 io.force(channel)
                 io.syncDirectory(path.parent)
                 val snapshot = initializeOrRead(path, wal, io)
@@ -208,7 +203,7 @@ internal class FileStore private constructor(
                 store.recover()
                 return store
             } catch (error: Throwable) {
-                runCatching { store?.close() ?: owner?.close() ?: channel?.close() }.exceptionOrNull()?.let(error::addSuppressed)
+                runCatching { store?.close() ?: owner?.close() ?: channel?.let(io::close) }.exceptionOrNull()?.let(error::addSuppressed)
                 owners.remove(path, token)
                 if (error is DatabaseException) throw error
                 throw DatabaseException("Unable to open persistent database").also { it.initCause(error) }
@@ -222,11 +217,11 @@ internal class FileStore private constructor(
                 if (length !in StorageCodec.SNAPSHOT_HEADER.toLong()..StorageCodec.MAX_SNAPSHOT.toLong()) {
                     throw DatabaseException("Invalid snapshot file size")
                 }
-                return StorageCodec.decodeSnapshot(Files.readAllBytes(path))
+                return StorageCodec.decodeSnapshot(io.readAllBytes(path))
             }
             val initial = if (Files.exists(wal)) {
                 if (Files.size(wal) != StorageCodec.WAL_HEADER.toLong()) throw DatabaseException("Required snapshot is missing")
-                val header = StorageCodec.decodeWalHeader(Files.readAllBytes(wal))
+                val header = StorageCodec.decodeWalHeader(io.readAllBytes(wal))
                 if (header.base != 0L) throw DatabaseException("Required snapshot history is missing")
                 Snapshot(header.identity, 0, Catalog())
             } else Snapshot(UUID.randomUUID(), 0, Catalog())
@@ -237,22 +232,27 @@ internal class FileStore private constructor(
         }
 
         private fun install(database: Path, target: Path, bytes: ByteArray, io: StoreIO) {
-            val temporary = Files.createTempFile(database.parent, temporaryPrefix(database), ".tmp")
-            try {
-                io.open(temporary, WRITE).use { io.append(it, bytes); io.force(it) }
+            withTemporary(database, io) { temporary ->
+                io.withChannel(temporary, WRITE) { io.append(it, bytes); io.force(it) }
                 io.replace(temporary, target)
                 io.syncDirectory(database.parent)
-            } finally { Files.deleteIfExists(temporary) }
+            }
+        }
+
+        private fun withTemporary(database: Path, io: StoreIO, action: (Path) -> Unit) {
+            val temporary = Files.createTempFile(database.parent, temporaryPrefix(database), ".tmp")
+            // Keep the write failure primary if deleting its temporary file also fails.
+            AutoCloseable { io.deleteIfExists(temporary) }.use { action(temporary) }
         }
 
         private fun temporaryPrefix(path: Path): String = ".kokodb-" + MessageDigest.getInstance("SHA-256")
             .digest(path.toString().toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) } + "-"
 
-        private fun read(channel: FileChannel, length: Int): ByteArray {
+        private fun read(channel: FileChannel, length: Int, io: StoreIO): ByteArray {
             val bytes = ByteArray(length)
             val buffer = ByteBuffer.wrap(bytes)
             while (buffer.hasRemaining()) {
-                if (channel.read(buffer) < 0) throw DatabaseException("Truncated storage file")
+                if (io.read(channel, buffer) < 0) throw DatabaseException("Truncated storage file")
             }
             return bytes
         }
