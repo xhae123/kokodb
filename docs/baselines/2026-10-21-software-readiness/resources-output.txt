@@ -1,0 +1,6 @@
+empty: median 44.29 ms
+open: median 47.21 ms
+first-query: median 73.77 ms
+crud fork 1: 0.40 s, RSS 100761600
+crud fork 2: 0.41 s, RSS 101236736
+crud fork 3: 0.35 s, RSS 101711872

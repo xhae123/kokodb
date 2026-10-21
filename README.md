@@ -6,7 +6,7 @@ KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API 
 
 Our goal is to reduce unnecessary resource and complexity costs for Kotlin applications that use relational data. We design model information, generated mapping, query execution, and storage together, and measure the resulting cost rather than treating the implementation language as proof of an advantage.
 
-Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope.
+Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope. The [software qualification report](docs/baselines/2026-10-21-software-readiness/README.md) records the first developer-preview recommendation, current costs and remaining production limits.
 
 The problem we target is the deployment and resource cost of relational storage in small Kotlin/JVM applications. A JVM implementation can avoid separately packaged native database binaries and expose the execution, allocation, and recovery paths directly. That alone does not establish lower memory use or better performance: we measure artifact size, fresh-process startup, process RSS, and workload allocation before making those claims.
 
@@ -152,7 +152,7 @@ KoKoDB.close()
 - A write outside a scope is an autocommit transaction. File commits append one checked multi-table row-splice frame, force the WAL, publish memory state, then return success. No net change adds no frame.
 - The database uses the chosen path plus `.wal` and `.lock` sidecars. Keep the pair together when closed; a missing/corrupt required file is an error, never an instruction to recreate empty data. Symbolic-link database/sidecar paths are rejected.
 - `checkpoint()` writes/forces a snapshot, atomically replaces it and syncs its directory, then installs a forced empty WAL. It is explicit: WAL grows until checkpointed. Closing releases ownership without requiring a checkpoint.
-- Restart validates versions, identities, checksums, sequence continuity, schemas, and keys before exposing state. A bounded incomplete terminal WAL frame is discarded; complete corruption fails open. Matching generated schemas are reused, missing model tables are durably created, and mismatches fail.
+- Restart validates versions, identities, checksums, sequence continuity, schemas, and keys before exposing state. A bounded incomplete terminal WAL frame is discarded; complete corruption causes opening to fail. Matching generated schemas are reused, missing model tables are durably created, and mismatches fail.
 - `CommitOutcomeUnknownException` means writing began but append/force failed. The transaction may be durable. Reads/writes/checkpoints then fail until close/reopen; retry only with application-level idempotency. A crash can also commit a transaction whose caller received no response.
 - Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Point changes record the changed row region; dispersed edits in one transaction can still record intervening rows. The entire working catalog must fit in JVM memory.
 - Supported durability relies on the filesystem/device honoring synchronization. Tests inject I/O errors, terminate child JVMs, and [model loss of unforced file contents and directory replacements](docs/baselines/2026-10-21-storage-power-loss/README.md). Physical power loss remains unqualified.
