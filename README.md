@@ -88,6 +88,7 @@ The former `execute()` methods on KoKoDB, Database, and Transaction have been re
 
 - The first SQL call opens the shared memory database lazily. Its model definitions come from the calling thread's context class loader, falling back to the library class loader.
 - `KoKoDB.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
+- If an explicit `openInMemory()` or `open(path)` initialization fails, calls remain blocked until an explicit open succeeds. A subsequent SQL call cannot silently retry with a different class loader or storage mode.
 - `KoKoDB.close()` discards memory-mode data and closes file-mode storage without deleting committed data. Calls then fail until `openInMemory()` or `open(path)` explicitly reopens a store. Repeated closes are harmless, and previously returned results remain detached.
 - Each shared API call and explicit transaction callback is serialized. Concurrent callers wait for the active operation; separate calls outside a transaction do not commit together.
 - The singleton is shared within its loaded JVM class loader. Separate processes cannot share an open database handle; file mode recovers committed data after restart.

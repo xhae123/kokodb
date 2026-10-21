@@ -185,6 +185,7 @@ The mutable lists and key sets are temporary recovery working state, not persist
 - Close does not checkpoint. A forced WAL commit is sufficient for restart recovery; checkpoints are explicit.
 - A recovery-required handle must not serve reads or writes from stale memory. Closing it must not rewrite a checkpoint from that stale state; reopening performs recovery.
 - Reopening never silently clears durable data. Existing KoKoDB memory-mode close/openInMemory behavior remains explicitly different from persistent open(path).
+- Failed explicit shared initialization leaves KoKoDB closed, including the first `openInMemory(classLoader)` attempt in a fresh JVM. SQL, typed/raw queries, transaction callbacks and checkpoints remain blocked until an explicit retry succeeds. Rejecting replacement of an already-open database preserves that active handle instead.
 
 ## Implementation and acceptance gates
 

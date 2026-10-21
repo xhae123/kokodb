@@ -46,12 +46,16 @@ object KoKoDB {
 
     fun checkpoint() = withDatabase { it.checkpoint() }
 
-    /** Opens a fresh database explicitly. An already-open database is an error; close it before replacing it. */
+    /**
+     * Opens a fresh database explicitly. Failed initialization leaves the facade closed until an explicit retry.
+     * An already-open database is an error; close it before replacing it.
+     */
     fun openInMemory(
         classLoader: ClassLoader = Thread.currentThread().contextClassLoader ?: Database::class.java.classLoader,
     ) = synchronized(lock) {
         database?.requireNoTransaction("openInMemory")
         if (database != null) throw DatabaseException("KoKoDB is already open; close it before opening a new database")
+        closed = true
         database = Database.inMemory(classLoader)
         closed = false
     }
