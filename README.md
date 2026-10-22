@@ -6,7 +6,7 @@ KoKoDB is an embedded relational database for Kotlin/JVM. Its primary query API 
 
 Our goal is to reduce unnecessary resource and complexity costs for Kotlin applications that use relational data. We design model information, generated mapping, query execution, and storage together, and measure the resulting cost rather than treating the implementation language as proof of an advantage.
 
-Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL; this is a development alpha with a deliberately narrow platform and SQL scope. The [software qualification report](docs/baselines/2026-10-21-software-readiness/README.md) records the first developer-preview recommendation, current costs and remaining production limits.
+Memory is the default storage mode. Explicit file storage uses a versioned snapshot and transaction WAL. The [alpha scope and acceptance record](docs/alpha.md) defines the supported SQL/platform subset, verification gates and remaining production limits. File applications should follow the [operating and restore guide](docs/operating-file-databases.md).
 
 The problem we target is the deployment and resource cost of relational storage in small Kotlin/JVM applications. A JVM implementation can avoid separately packaged native database binaries and expose the execution, allocation, and recovery paths directly. That alone does not establish lower memory use or better performance: we measure artifact size, fresh-process startup, process RSS, and workload allocation before making those claims.
 

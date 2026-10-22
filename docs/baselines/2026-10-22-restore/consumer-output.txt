@@ -1,0 +1,18 @@
+PASS create-wal: SOURCE_CLOSED
+PASS restore-wal: RESTORE_VERIFIED
+PASS create-snapshot: SOURCE_CLOSED
+PASS restore-snapshot: RESTORE_VERIFIED
+PASS create-mixed: SOURCE_CLOSED
+PASS restore-mixed: RESTORE_VERIFIED
+PASS missing-manifest: MANIFEST_REJECTED
+PASS missing-wal: MANIFEST_REJECTED
+PASS short-wal: MANIFEST_REJECTED
+PASS corrupt-snapshot: MANIFEST_REJECTED
+PASS missing-entry: MANIFEST_REJECTED
+PASS engine-missing-wal: OPEN_REJECTED
+PASS engine-missing-snapshot: OPEN_REJECTED
+PASS engine-mixed-identity: OPEN_REJECTED
+PASS unverified-tail-control: PREFIX_RECOVERED
+PASS create-incompatible-schema: SOURCE_CLOSED
+PASS reject-incompatible-schema: OPEN_REJECTED
+Qualified 3 restored histories, 5 archive rejections, 4 engine rejections and 1 unverified-tail control

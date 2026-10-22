@@ -1,0 +1,37 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "base_command": [
+    "/opt/homebrew/opt/openjdk@17/bin/java",
+    "-XX:-UsePerfData",
+    "-cp",
+    "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+    "sample.BackupFixture"
+  ],
+  "jars": [
+    {
+      "path": "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    },
+    {
+      "path": "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 162685,
+      "sha256": "0a4030e622112e128fc93b223f09e9046e553c5c56a81b96e5293841816f7ee7"
+    },
+    {
+      "path": "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar",
+      "bytes": 1804720,
+      "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+    },
+    {
+      "path": "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "bytes": 16904,
+      "sha256": "33f93a50c89baeeb12dab7f7c732038b89cb97f18713d4eed661cc5f0f10a54c"
+    }
+  ],
+  "sources": {
+    "sample/check_backup.py": "34dc2311bf3e7a2ec742a7246fe5663bf184103606205322ffb9b4661e534795",
+    "sample/src/main/kotlin/sample/BackupFixture.kt": "372faf22a21e37fadcd89cce5b36b395cedb90c047c52641b6a4240bbeb50251"
+  }
+}

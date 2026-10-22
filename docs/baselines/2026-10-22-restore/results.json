@@ -1,0 +1,185 @@
+[
+  {
+    "case": "create-wal",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "create",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/wal/original.koko",
+      "wal"
+    ],
+    "result": "SOURCE_CLOSED"
+  },
+  {
+    "case": "restore-wal",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "restore",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/wal/restored/renamed.koko"
+    ],
+    "result": "RESTORE_VERIFIED"
+  },
+  {
+    "case": "create-snapshot",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "create",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/snapshot/original.koko",
+      "snapshot"
+    ],
+    "result": "SOURCE_CLOSED"
+  },
+  {
+    "case": "restore-snapshot",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "restore",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/snapshot/restored/renamed.koko"
+    ],
+    "result": "RESTORE_VERIFIED"
+  },
+  {
+    "case": "create-mixed",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "create",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/mixed/original.koko",
+      "mixed"
+    ],
+    "result": "SOURCE_CLOSED"
+  },
+  {
+    "case": "restore-mixed",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "restore",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/mixed/restored/renamed.koko"
+    ],
+    "result": "RESTORE_VERIFIED"
+  },
+  {
+    "case": "missing-manifest",
+    "result": "MANIFEST_REJECTED"
+  },
+  {
+    "case": "missing-wal",
+    "result": "MANIFEST_REJECTED"
+  },
+  {
+    "case": "short-wal",
+    "result": "MANIFEST_REJECTED"
+  },
+  {
+    "case": "corrupt-snapshot",
+    "result": "MANIFEST_REJECTED"
+  },
+  {
+    "case": "missing-entry",
+    "result": "MANIFEST_REJECTED"
+  },
+  {
+    "case": "engine-missing-wal",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "reject",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/engine-missing-wal/data.koko",
+      "Required WAL is missing"
+    ],
+    "result": "OPEN_REJECTED"
+  },
+  {
+    "case": "engine-missing-snapshot",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "reject",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/engine-missing-snapshot/data.koko",
+      "Required snapshot is missing"
+    ],
+    "result": "OPEN_REJECTED"
+  },
+  {
+    "case": "engine-mixed-identity",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "reject",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/engine-mixed-identity/data.koko",
+      "Snapshot and WAL identity/history mismatch"
+    ],
+    "result": "OPEN_REJECTED"
+  },
+  {
+    "case": "unverified-tail-control",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "prefix",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/unverified-tail-control/data.koko"
+    ],
+    "result": "PREFIX_RECOVERED"
+  },
+  {
+    "case": "create-incompatible-schema",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "incompatible",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/schema/old.koko"
+    ],
+    "result": "SOURCE_CLOSED"
+  },
+  {
+    "case": "reject-incompatible-schema",
+    "command": [
+      "/opt/homebrew/opt/openjdk@17/bin/java",
+      "-XX:-UsePerfData",
+      "-cp",
+      "/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/annotations-13.0.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kokodb-0.1.0-SNAPSHOT.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/kotlin-stdlib-2.3.20.jar:/Users/xhae000/Desktop/kokodb/sample/build/install/sample/lib/sample.jar",
+      "sample.BackupFixture",
+      "reject",
+      "/Users/xhae000/Desktop/kokodb/.local/improvements/2026-10-22-alpha-restore/final-run/schema/restored/data.koko",
+      "Generated model does not match stored schema 'users'"
+    ],
+    "result": "OPEN_REJECTED"
+  }
+]
