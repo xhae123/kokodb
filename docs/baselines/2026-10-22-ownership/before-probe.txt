@@ -1,0 +1,1 @@
+REPRODUCED: acquired a second lock while the database owner is still open

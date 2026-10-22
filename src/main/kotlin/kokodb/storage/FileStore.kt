@@ -196,6 +196,8 @@ internal class FileStore private constructor(
                 channel = io.open(lockPath, CREATE, WRITE)
                 val lock = channel.tryLock() ?: throw DatabaseException("Database is locked by another process")
                 owner = Owner(path, channel, lock, token, io)
+                // Another database may replace a nonempty snapshot at this path, invalidating our inode lock.
+                if (channel.size() != 0L) throw DatabaseException("Ownership file is not empty; possible database path collision")
                 io.force(channel)
                 io.syncDirectory(path.parent)
                 val snapshot = initializeOrRead(path, wal, io)
