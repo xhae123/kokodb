@@ -1,0 +1,22 @@
+{
+  "base_commit": "92772a154130047d91ce1129b8482d206d7c4ea7",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "source_sha256": {
+    "src/main/kotlin/kokodb/storage/FileStore.kt": "e6b93828903c68ade211c304ffa19e258264da68dc9a6427a508d910e557fb4a",
+    "src/test/kotlin/kokodb/storage/StorageOwnershipTest.kt": "90a4b234b9f4918271266844140e6ef3cc5d64329bd2831f0fee3886c7a18bb8",
+    ".local/improvements/2026-10-22-alpha-ownership/CollisionProbe.java": "e621f4a6a062d78aa048a1e144c48c436f1e0beec3ae14555e30b2ce71be0532"
+  },
+  "artifacts": [
+    {
+      "path": "benchmarks/build/install/benchmarks/lib/kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 162619,
+      "sha256": "9b71923b86a01bd784f972125614ecb8eb21f486c8d48dadaa60b2d025f4b1b7"
+    },
+    {
+      "path": "build/libs/kokodb-0.1.0-SNAPSHOT.jar",
+      "bytes": 162685,
+      "sha256": "0a4030e622112e128fc93b223f09e9046e553c5c56a81b96e5293841816f7ee7"
+    }
+  ]
+}

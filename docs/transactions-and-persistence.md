@@ -64,6 +64,7 @@ Use a versioned binary snapshot plus an append-only transaction WAL containing r
 
 - Resolve the database path consistently and reject a second owner using an in-process registry plus an OS file lock. Lock acquisition failures are explicit errors.
 - Keep the lock file; unlinking a live lock file can allow another process to lock a different inode. Release the lock on close.
+- Ownership files are empty. Reject a nonempty `.lock` sidecar without changing its contents: it may be another database's snapshot, whose checkpoint would replace the locked inode. Choose non-overlapping database and sidecar paths; do not delete a conflicting file to force an open.
 - Do not rename an open database or its sidecars. Opening through aliases/hard links is outside the initial supported contract.
 - All replacement files are created in the database directory. File synchronization, atomic replacement, and parent-directory synchronization are mandatory capabilities; persistent open fails when the platform adapter cannot provide the required operations. There is no silent best-effort durability mode.
 - Network filesystems are outside the initial support claim. Platform support must be backed by fault and recovery tests; memory mode remains independent of these capabilities.
