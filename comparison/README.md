@@ -26,7 +26,7 @@ Requires JDK 17 and Python 3.9 or later:
 python3 comparison/measure.py --java "$JAVA_HOME/bin/java" --output comparison/results/current
 ```
 
-Default JMH settings: one thread, three independent forks per engine/size, five one-second warmup iterations and five one-second measurement iterations per fork, AverageTime in us/query, and the GC allocation profiler. Forks use `-Xms64m -Xmx256m -XX:-UsePerfData`. Six parameter combinations take approximately three minutes plus setup.
+Default JMH settings: one thread, three independent forks per engine/size, five one-second warmup iterations and five one-second measurement iterations per fork, AverageTime in microseconds per operation, and the GC allocation profiler. Forks use `-Xms64m -Xmx256m -XX:-UsePerfData`. Six parameter combinations take approximately three minutes plus setup.
 
 `--quick` uses one fork and short iterations for diagnostics; it must not be used as final comparison evidence. The timing-free `:comparison:smoke` fixture verifies both engines at all sizes in CI.
 
@@ -38,7 +38,7 @@ The runner retains full JMH logs/JSON, iteration observations and confidence int
 - JMH AverageTime scores are mean time per query, not request p95/p99. GC-profiler bytes are allocation, not retained database heap or whole-process RSS.
 - Both engines and the harness are on the measurement classpath. Artifact inventories list them separately; the entire benchmark distribution is not a KoKoDB consumer dependency set.
 - A generated mapper can also be built over JDBC. Any measured difference belongs to these execution paths and contracts, not an assertion that H2 can never serve Kotlin applications efficiently.
-- Compiler SQL validation, offline synchronization and other proposed directions are not implemented by this experiment. A differentiation claim needs reproducible results and a relevant application workload, not just language branding.
+- No compiler-validation, synchronization or storage guarantee follows from these timing experiments. A differentiation claim needs reproducible results and a relevant application workload, not just language branding.
 
 ## Point queries and mixed reads/writes
 
@@ -75,3 +75,35 @@ comparison/build/install/comparison/bin/comparison comparison.InsertBatchBenchma
 ```
 
 This KoKoDB-only JMH workload checks the warm memory INSERT path at 1,000 and 16,000 rows with INT/TEXT primary keys. It uses three JVM forks, three one-second warmups and three one-second measurement iterations. One measured operation is one transaction inserting the requested rows; table initialization and complete row verification occur outside timing on each invocation. It does not compare engine durability or claim H2 superiority. [The INSERT study](../docs/baselines/2026-10-21-insert-scaling/README.md) uses the same harness with before/after runtime JAR substitution and retains the artifacts and metadata. Thread allocation and approximate retained heap are recorded by the separate benchmark-module harness.
+
+## Fresh JVM workloads with isolated dependencies
+
+```sh
+./gradlew :comparison:installDist
+python3 comparison/measure_startup.py --java "$JAVA_HOME/bin/java" --output comparison/results/startup
+```
+
+The runner launches 20 fresh JVMs per engine and mode (160 processes), shuffling modes and engine order within paired rounds with a recorded seed. Each classpath contains the same harness, Kotlin stdlib and annotations JARs, plus only the selected engine. JMH, coroutines and the competing engine are excluded. It verifies result contents and process success before accepting each observation.
+
+- `empty`: load the probe and print a completion marker, without opening a database.
+- `ready`: open an empty memory database with the generated model table (KoKoDB) or explicit equivalent DDL (H2). H2 also prepares INSERT/SELECT statements and disables autocommit for the subsequent batch contract.
+- `first`: ready, insert one row in one transaction, materialize/verify its Kotlin model, close.
+- `load1000`: the same lifecycle with 1,000 rows. H2 uses a prepared batch and pre-sized result list; KoKoDB uses ordinary SQL calls inside one transaction and generated mapping.
+
+Wall time covers process launch through exit, including verification and close. `wait4` records the child process's peak RSS (macOS bytes, Linux KiB converted to bytes), including JVM and native memory. Neither metric isolates database overhead; do not subtract independently measured modes as an exact component cost. Fresh JVMs do not imply cold filesystem caches. No outliers are removed. `--runs 1` is a fixture diagnostic, not performance evidence.
+
+The output directory must be new. Raw observations retain pairing and execution order; summaries include median and full range. Environment metadata records classpaths, JVM flags, source hashes and each JAR's bytes/hash.
+
+## Comparative INSERT transactions
+
+```sh
+python3 comparison/measure.py --java "$JAVA_HOME/bin/java" --suite inserts --output comparison/results/insert-comparison
+```
+
+This suite compares both engines at 1,000/16,000 INT-key rows. One operation inserts the entire population into an empty memory table and commits one transaction. KoKoDB invokes parameterized SQL for each row; H2 reuses a prepared statement with `addBatch`/`executeBatch`, then commits. Both construct identical key/name values and check affected counts. H2 uses its default batch behavior without driver-specific tuning.
+
+Invocation setup opens the database and prepares schema/statements; teardown materializes and verifies every row and closes the database. Both are outside the primary operation timer. JMH invocation fixtures can still influence caches, GC and scheduling. **The GC profiler observes fixture allocation too: its normalized bytes must not be described as INSERT-only allocation.** Three forks, three one-second warmups and three measured iterations are used. This compares these API paths, not arbitrary batches, durable commits or concurrent writes.
+
+`measure.py` writes generic `mean_us_per_operation` and `allocated_bytes_per_operation` CSV columns for every suite. The JSON retains original metric units, confidence intervals and per-fork iterations. All runners require a new output directory to avoid mixing experiments.
+
+JMH warns against invocation fixtures for sub-millisecond operations. The current 1,000-row comparison falls below that threshold; retain it as diagnostic, without a headline speedup. See the [complete current study](../docs/baselines/2026-10-23-engine-comparison/README.md).

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="160" viewBox="0 0 500 160" role="img" aria-labelledby="title desc">
+  <title id="title">KoKoDB</title>
+  <desc id="desc">The KoKoDB monogram and wordmark in solid violet on a transparent background.</desc>
+<g transform="translate(-29 0) scale(.625)"><g fill="#7c3aed">
+    <path d="M55 40H88Q96 40 96 48V105H106L161 50Q167 44 176 44H215L138 121Q132 127 124 127H55Q47 127 47 119V48Q47 40 55 40Z"/>
+    <path d="M55 141H125Q133 141 139 147L208 216H166Q158 216 152 210L96 154V208Q96 216 88 216H55Q47 216 47 208V149Q47 141 55 141Z"/>
+  </g></g>
+    <text x="127" y="115" fill="#7c3aed" font-family="Arial, Helvetica, sans-serif"
+          font-size="90" font-weight="700" letter-spacing="-3">KoKoDB</text>
+</svg>

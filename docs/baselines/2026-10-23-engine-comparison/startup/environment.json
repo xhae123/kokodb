@@ -1,0 +1,91 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "architecture": "arm64",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "runs_per_engine_mode": 20,
+  "order_seed": 20261023,
+  "commands": {
+    "kokodb": [
+      "$JAVA_HOME/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "$CHECKOUT/comparison/build/install/comparison/lib/comparison.jar:$CHECKOUT/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar:$CHECKOUT/comparison/build/install/comparison/lib/annotations-23.0.0.jar:$CHECKOUT/comparison/build/install/comparison/lib/kokodb-0.1.0-SNAPSHOT.jar",
+      "comparison.StartupProbe",
+      "kokodb"
+    ],
+    "h2": [
+      "$JAVA_HOME/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "$CHECKOUT/comparison/build/install/comparison/lib/comparison.jar:$CHECKOUT/comparison/build/install/comparison/lib/kotlin-stdlib-2.3.20.jar:$CHECKOUT/comparison/build/install/comparison/lib/annotations-23.0.0.jar:$CHECKOUT/comparison/build/install/comparison/lib/h2-2.5.252.jar",
+      "comparison.StartupProbe",
+      "h2"
+    ]
+  },
+  "runtime_commit": "92e62f5a823bee7290e252dce7b459d37f005db5",
+  "sources": {
+    "comparison/src/main/java/comparison/IndexLifecycleProbe.java": "b616e22bc801821c434212f5d97fa825dce81746e3c1f317cca9d9e96a8a079d",
+    "comparison/src/main/java/comparison/InsertBatchBenchmark.java": "51fd962ce0566eb888768ff0e9306e314f49b83dc069017845287d44e87ada69",
+    "comparison/src/main/java/comparison/ModelFixture.java": "2254a493dccaa3c34ce7c3973949de2f3addd980c2722db5a134e0c10af71cf2",
+    "comparison/src/main/java/comparison/ModelQueryBenchmark.java": "b4d27fcbbfb06ed03159534b7e4f8e3b59bf0bbfd1597cd5485df420f3f56bae",
+    "comparison/src/main/java/comparison/PointFixture.java": "6a1fb9f59aa2f1db4cbce8bb994c0b6579a2128e5924fa3c82ff83f60e3515a8",
+    "comparison/src/main/java/comparison/PointQueryBenchmark.java": "f11d0a903eb1f8fc60322cd890b7b9c77f36039e42489ea8ae14084e3071627a",
+    "comparison/src/main/java/comparison/Smoke.java": "21e2162a76209c039323b9cfd64ba456b44e3006e73265c6cb6a2f94e11a58cb",
+    "comparison/src/main/java/comparison/StartupProbe.java": "ab8aaeb249b450a1002565f00f34e6e91e65d360b37da3b4d9416478cd34c475",
+    "comparison/src/main/java/comparison/WriteComparisonBenchmark.java": "9b7a5c76224dc14e3627d42ecdebc245aed12d87f4f546d3b38de50152071b9d",
+    "comparison/src/main/kotlin/comparison/BenchmarkUser.kt": "f9a072ba8aff4bc020257b515344d38ffe654bf1c577acda5caea0dbe9d298c3",
+    "comparison/src/main/kotlin/comparison/CoroutineContractStudy.kt": "56f8db844671e8ba47483cd1ca9aee40b5e2c5e2ae0a823aaf25c01f36d72998",
+    "comparison/src/main/kotlin/comparison/DifferentialCheck.kt": "e170ea93db1dfd501760502e4d0bce17aa9a8fb720385bee495bf69f8e707909"
+  },
+  "runner_sha256": "7786a0a1c27c630ca2a5cb4322d5be4662c80ddb3459b22c9c9004ae0f4ee8d2",
+  "jars": {
+    "kokodb": [
+      {
+        "name": "comparison.jar",
+        "bytes": 145374,
+        "sha256": "0fce9c3e0e9ff227e5c5f6b1e190877407195cb50fc9b6ec7eef9b14e8f216d7"
+      },
+      {
+        "name": "kotlin-stdlib-2.3.20.jar",
+        "bytes": 1804720,
+        "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+      },
+      {
+        "name": "annotations-23.0.0.jar",
+        "bytes": 29371,
+        "sha256": "7b0f19724082cbfcbc66e5abea2b9bc92cf08a1ea11e191933ed43801eb3cd05"
+      },
+      {
+        "name": "kokodb-0.1.0-SNAPSHOT.jar",
+        "bytes": 162685,
+        "sha256": "0a4030e622112e128fc93b223f09e9046e553c5c56a81b96e5293841816f7ee7"
+      }
+    ],
+    "h2": [
+      {
+        "name": "comparison.jar",
+        "bytes": 145374,
+        "sha256": "0fce9c3e0e9ff227e5c5f6b1e190877407195cb50fc9b6ec7eef9b14e8f216d7"
+      },
+      {
+        "name": "kotlin-stdlib-2.3.20.jar",
+        "bytes": 1804720,
+        "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+      },
+      {
+        "name": "annotations-23.0.0.jar",
+        "bytes": 29371,
+        "sha256": "7b0f19724082cbfcbc66e5abea2b9bc92cf08a1ea11e191933ed43801eb3cd05"
+      },
+      {
+        "name": "h2-2.5.252.jar",
+        "bytes": 2693360,
+        "sha256": "90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20"
+      }
+    ]
+  }
+}
