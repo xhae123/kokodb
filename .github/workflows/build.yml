@@ -23,6 +23,16 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build :sample:run :benchmarks:run --args=smoke :benchmarks:storageSmoke :comparison:smoke :comparison:differential
+      - name: Verify README quickstart and failed-import rollback
+        run: ./gradlew :quickstart:run
+      - name: Verify isolated engine startup fixtures
+        run: |
+          ./gradlew :comparison:installDist
+          python3 comparison/measure_startup.py --runs 1 --output comparison/results/startup-smoke
+      - name: Verify equivalent catalog CLI reports
+        run: |
+          ./gradlew :catalog-example:installDist
+          python3 examples/catalog/measure.py --runs 1 --output .local/catalog-smoke
       - name: Reject malformed SQL in a Gradle consumer
         run: python3 compiler-plugin/check_gradle.py
       - name: Qualify incremental model discovery across Gradle modules

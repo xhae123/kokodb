@@ -13,6 +13,10 @@ public final class Smoke {
                     fixture.update(rows / 2, "updated");
                     fixture.verify();
                 }
+                try (var session = StartupProbe.open(engine)) {
+                    session.insert(rows);
+                    StartupProbe.verify(session.query(), rows);
+                }
                 System.out.println("Verified " + engine + " with " + rows + " Kotlin models and point queries");
             }
         }

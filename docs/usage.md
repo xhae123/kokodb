@@ -1,0 +1,240 @@
+# API and Build Guide
+
+Detailed contracts for the current alpha. Start with the [project overview](../README.md) for measured positioning and a short example.
+
+## Getting started
+
+Run `./gradlew :quickstart:run` from the checkout for the [README example](../examples/quickstart/src/main/kotlin/quickstart/Main.kt). It demonstrates generated model mapping, a successful catalog replacement and rollback after a duplicate id. The examples below describe the API in more detail.
+
+Declare the result model. KSP generates its table schema and mapper; the database discovers the generated definitions and prepares the tables automatically.
+
+```kotlin
+import kokodb.DbTable
+import kokodb.Id
+import kokodb.KoKoDB
+
+@DbTable("users")
+data class User(@Id val id: Int, val name: String)
+
+KoKoDB(
+    "INSERT INTO users VALUES (:id, :name)",
+    params = mapOf("id" to 1, "name" to "Koko"),
+)
+
+val users: List<User> = KoKoDB<User>(
+    "SELECT id, name FROM users WHERE name = :name",
+    params = mapOf("name" to "Koko"),
+)
+
+check(users == listOf(User(1, "Koko")))
+```
+
+`KoKoDB` is an object. Both call forms reuse the same database rather than constructing a new database. `KoKoDB<Model>(sql, params)` returns `List<Model>` for SELECT; `KoKoDB(sql, params)` returns an Int write count. Supply the model type explicitly for typed queries.
+
+No application database wrapper, service class, repository declaration, or manual mapper is required. Use the same `KoKoDB` API from different application functions.
+
+## Query and model contracts
+
+- `KoKoDB(sql, params)` accepts CREATE TABLE, INSERT, UPDATE, and DELETE. SELECT requires an explicit model type or `KoKoDB.query()` for raw rows.
+- `KoKoDB<Model>(sql, params)` accepts SELECT and returns freshly reconstructed, detached model objects. Empty results return an empty list.
+- Typed results currently require an `@DbTable` model and the KoKoDB KSP processor. Ordinary unannotated DTOs, scalar result types, and arbitrary object mapping are not supported.
+- Models must be public top-level non-generic data classes with public constructors and public non-null Int/String constructor properties. Computed properties are not stored.
+- SELECT must use the model's table and include each stored property exactly once, or use `*`. Column order may differ from constructor order. Wrong tables, incomplete/duplicate projections, incompatible schemas, and invalid parameters fail even when no rows match.
+- Typed partial projections, aliases, joins, aggregation, and sorting are not implemented. Use raw rows for supported partial projections.
+- `@Id` optionally declares one caller-supplied Int/String primary key. Duplicate keys fail before INSERT or UPDATE changes any rows. A key is not required for typed queries.
+- Primary-key queries reuse bounded indexes. Sustained INSERTs maintain an immutable key index; other repeated key lookups can build a lazy position cache. Small tables and non-key predicates retain scans; [execution details and memory limits](query-execution.md) explain the tradeoffs. [Immutable row-block measurements](baselines/2026-10-18-row-blocks/README.md) cover the point-write improvement, full-scan cost, and recovery timing uncertainty against the prior runtime and prepared H2.
+- SQL identifiers are case-insensitive. String values and parameter names remain case-sensitive. Parameters bind Int/String values; null and implicit type conversion are unsupported.
+- The optional SQL compiler plugin checks static SQL syntax and query/write call categories during Kotlin/JVM compilation. Dynamic SQL and stored schemas remain validated at execution time; Kotlin result assignment checks are separate.
+- Mutating a returned model does not write to the database. There is no automatic dirty checking.
+
+## Raw SQL
+
+Raw SQL does not require a model declaration or KSP. Create schemas explicitly and receive detached Row values:
+
+```kotlin
+KoKoDB("CREATE TABLE settings (name TEXT PRIMARY KEY, value INT)")
+KoKoDB(
+    "INSERT INTO settings VALUES (:name, :value)",
+    mapOf("name" to "count", "value" to 3),
+)
+val count = KoKoDB.query("SELECT value FROM settings WHERE name = :name", mapOf("name" to "count"))
+    .single().getInt("value")
+```
+
+```kotlin
+val updated = KoKoDB(
+    "UPDATE settings SET value = :value WHERE name = :name",
+    mapOf("value" to 4, "name" to "count"),
+)
+val deleted = KoKoDB("DELETE FROM settings WHERE name = :name", mapOf("name" to "count"))
+check(updated == 1 && deleted == 1)
+```
+
+`KoKoDB(sql, params)` returns 0 for CREATE TABLE, 1 for INSERT, and the number of matched rows for UPDATE/DELETE. UPDATE counts matches even when their values stay equal. Omitting WHERE updates or deletes all rows. `query()` returns `List<Row>`; getters reject missing or mistyped columns. Typed and raw calls use the same catalog and engine.
+
+Each write statement validates its entire candidate state before publishing changes. Invalid columns, types, parameters, duplicate assignments, or primary-key collisions leave existing rows unchanged, including failures involving multiple matching rows. This is statement atomicity; several calls do not commit or roll back together.
+
+The former `execute()` methods on KoKoDB, Database, and Transaction have been removed. Migrate writes to `KoKoDB(sql, params)`, `db(sql, params)`, or `scope(sql, params)` and recompile consumers. Inside a shared transaction, use the same global KoKoDB calls.
+
+## Shared database lifetime
+
+- The first SQL call opens the shared memory database lazily. Its model definitions come from the calling thread's context class loader, falling back to the library class loader.
+- `KoKoDB.openInMemory(classLoader)` can open it explicitly before use. Opening an already-active database fails rather than discarding its rows.
+- If an explicit `openInMemory()` or `open(path)` initialization fails, calls remain blocked until an explicit open succeeds. A subsequent SQL call cannot silently retry with a different class loader or storage mode.
+- `KoKoDB.close()` discards memory-mode data and closes file-mode storage without deleting committed data. Calls then fail until `openInMemory()` or `open(path)` explicitly reopens a store. Repeated closes are harmless, and previously returned results remain detached.
+- Each shared API call and explicit transaction callback is serialized. Concurrent callers wait for the active operation; separate calls outside a transaction do not commit together.
+- The singleton is shared within its loaded JVM class loader. Separate processes cannot share an open database handle; file mode recovers committed data after restart.
+
+```kotlin
+KoKoDB.close()
+KoKoDB.openInMemory() // a fresh, empty store with generated model tables
+```
+
+For isolated databases or tests, use independent instances. These are intended for sequential use and do not share data with KoKoDB:
+
+```kotlin
+import kokodb.Database
+
+val db = Database.inMemory()
+val users = db.queryModels(User::class.java, "SELECT * FROM users")
+```
+
+## Memory transactions
+
+```kotlin
+KoKoDB.transaction {
+    KoKoDB("UPDATE users SET name = :name WHERE id = :id", mapOf("name" to "Updated", "id" to 1))
+    KoKoDB("INSERT INTO users VALUES (2, 'Another')")
+    val pending: List<User> = KoKoDB<User>("SELECT * FROM users")
+    check(pending.size == 2)
+}
+```
+
+- The callback reads its own writes. Returning normally publishes all its changes together, including newly created tables. A thrown exception discards them all.
+- A SQL or mapping error makes the scope rollback-only even if caught inside the callback. Further operations and commit fail; earlier writes are discarded.
+- Global KoKoDB calls on the owner thread join the scope. Other shared callers wait until the entire callback finishes.
+- Use the same global call syntax inside and outside the shared scope. The scope also offers `query<Model>()`, `queryRows()`, and `this(sql, params)` for direct access. Independent databases support `db(sql, params)` writes and `db.transaction { ... }` too.
+- Scopes are synchronous and owned by one thread. Captured handles reject another thread or reuse after completion. Nested scopes and shared close/open inside a scope fail and abort it if caught.
+- Transaction callbacks are never automatically retried. External side effects are not rolled back; do not wait for another thread to call KoKoDB while holding its transaction lock.
+- Memory-mode commit is not durable storage. A process exit or close discards memory data; file-mode commit forces the WAL before success.
+
+## Persistent storage and restart recovery
+
+Memory data disappears when the process exits. When rows must survive restart, open a file before using the same SQL API:
+
+```kotlin
+import java.nio.file.Path
+
+KoKoDB.open(Path.of("app.koko"))
+try {
+    KoKoDB.transaction {
+        KoKoDB("INSERT INTO users VALUES (:id, :name)", mapOf("id" to 1, "name" to "Koko"))
+    }
+    KoKoDB.checkpoint()
+} finally {
+    KoKoDB.close()
+}
+
+KoKoDB.open(Path.of("app.koko"))
+val restored = KoKoDB<User>("SELECT * FROM users WHERE id = 1")
+KoKoDB.close()
+```
+
+- The parent directory must already exist. Initial support is Linux/macOS with APFS, ext4, or overlay filesystem types and functioning file force, atomic replacement, directory force, and OS locks. Other combinations fail explicitly. Network filesystems, aliases/hard links, live file renaming, and multiple owners are outside the supported contract.
+- A write outside a scope is an autocommit transaction. File commits append one checked multi-table row-splice frame, force the WAL, publish memory state, then return success. No net change adds no frame.
+- The database uses the chosen path plus `.wal` and `.lock` sidecars. Keep the pair together when closed; a missing/corrupt required file is an error, never an instruction to recreate empty data. Symbolic-link database/sidecar paths are rejected.
+- `checkpoint()` writes/forces a snapshot, atomically replaces it and syncs its directory, then installs a forced empty WAL. It is explicit: WAL grows until checkpointed. Closing releases ownership without requiring a checkpoint.
+- Restart validates versions, identities, checksums, sequence continuity, schemas, and keys before exposing state. A bounded incomplete terminal WAL frame is discarded; complete corruption causes opening to fail. Matching generated schemas are reused, missing model tables are durably created, and mismatches fail.
+- `CommitOutcomeUnknownException` means writing began but append/force failed. The transaction may be durable. Reads/writes/checkpoints then fail until close/reopen; retry only with application-level idempotency. A crash can also commit a transaction whose caller received no response.
+- Snapshot size is bounded to 256 MiB and a transaction WAL frame to 64 MiB. Point changes record the changed row region; dispersed edits in one transaction can still record intervening rows. The entire working catalog must fit in JVM memory.
+- Supported durability relies on the filesystem/device honoring synchronization. Tests inject I/O errors, terminate child JVMs, and [model loss of unforced file contents and directory replacements](baselines/2026-10-21-storage-power-loss/README.md). Physical power loss remains unqualified.
+- Legacy version-1 WALs are validated and migrated through a checkpoint to version 2 during open; older binaries reject the new WAL. Broader cross-release compatibility is not promised before a documented release. Artifacts are not published yet.
+- File commits reject growth beyond the 256 MiB encoded snapshot limit before writing WAL or publishing rows. Transactions must also fit the 64 MiB WAL frame limit. These are encoded-data limits, not heap-size guarantees; see the [storage contract](transactions-and-persistence.md) for recovery of oversized files written by earlier development versions.
+
+Independent persistent handles use `Database.open(path).use { db -> ... }`. Close rejects use inside a transaction and completed handles cannot be used again. A failed explicit shared file open leaves the facade closed; it cannot silently fall back to memory.
+
+The [row-splice WAL measurements](baselines/2026-10-18-wal-row-splices/README.md) compare identical transaction boundaries before and after the format change. For 1,000 separately committed INSERTs, WAL bytes fell from 6,972,995 to 96,890 and allocation per INSERT from 173,581.5 to 8,565.2 bytes. Commit latency was effectively unchanged; every transaction still forces the WAL. The runtime JAR grew from 121,928 to 131,379 bytes without new runtime dependencies. Raw data, point UPDATE/DELETE results, limitations, and reproduction commands are retained.
+
+[Incremental recovery validation](baselines/2026-10-18-recovery-scaling/README.md) avoids rebuilding the complete primary-key set for every WAL splice. In a controlled 16,000-INSERT replay fixture, median open time fell from 1,772.103 to 92.253 ms and cumulative thread allocation from 6.216 GB to 58.766 MB. The comparison uses warm measured opens against the prior KoKoDB runtime; it is not a cold-start or general engine-performance claim.
+
+## Build setup
+
+Requires JDK 17. The Gradle Wrapper downloads the pinned Gradle distribution on first use.
+
+```sh
+./gradlew build :sample:run
+```
+
+Artifacts are not published yet. The `sample` module demonstrates typed SQL calls from separate functions and the required consumer setup inside this checkout:
+
+```kotlin
+plugins {
+    kotlin("jvm")
+    id("com.google.devtools.ksp")
+}
+
+dependencies {
+    implementation(project(":"))
+    ksp(project(":processor"))
+}
+```
+
+Enable KSP in modules declaring annotated models. The processor runs at build time and is not a runtime dependency. Raw SQL consumers only need the runtime library. The [multi-module consumer qualification](baselines/2026-10-21-processor-consumer/README.md) checks packaged discovery through incremental model changes, renames, deletions and error recovery on the documented toolchain.
+
+The [`quickstart` module](../examples/quickstart/build.gradle.kts) is a minimal configured application using just the runtime and KSP processor. Edit its [model and application](../examples/quickstart/src/main/kotlin/quickstart/Main.kt) and rerun `./gradlew :quickstart:run` to evaluate your own data. The `project(...)` dependency declarations above refer to modules in this checkout, not published coordinates for an unrelated Gradle build.
+
+The sample also enables the optional SQL compiler plugin, so `KoKoDB<User>("SELEC * FROM users")` fails its Kotlin build. It reuses the runtime parser and warns for dynamic SQL; it does not check schema existence, projections, or parameter maps. See [compile-time SQL validation](compile-time-sql-validation.md) for consumer setup, qualified compiler versions, research, and exact coverage.
+
+The [Kotlin model comparison](baselines/2026-10-08-kotlin-model-query/README.md) measures generated KoKoDB results against H2 2.5.252 prepared queries with direct constructor mapping. In the warmed 1,000-row full-model fixture, KoKoDB measured 7.21 us/query versus H2's 19.15 us, with comparable allocation. This is a scoped result, not a general engine-performance claim.
+
+## Architecture
+
+[INSERT scaling measurements](baselines/2026-10-21-insert-scaling/README.md) reduce a warmed 16,000-row INT-key transaction from 533.2 to 12.9 ms against the prior runtime, while adding approximately 32 retained bytes per indexed row and increasing allocation. The study retains cold/fixed-order timing variation, bounded-index behavior and point-query tradeoffs.
+
+Reproduce the current resource baseline with the [benchmark guide](../benchmarks/README.md). Benchmarks are a separate development module and add no runtime-library dependency.
+
+```mermaid
+sequenceDiagram
+    participant App as Kotlin application
+    participant Shared as KoKoDB singleton
+    participant DB as Shared Database
+    participant Parser as SQL parser
+    participant Engine as Relational executor
+    participant Adapter as Generated model mapper
+    App->>Shared: KoKoDB<User>(sql, params)
+    Shared->>Shared: Serialize call and reuse database
+    Shared->>DB: queryModels(User class, sql, params)
+    DB->>Parser: Parse SELECT
+    DB->>DB: Validate model table and complete projection
+    DB->>Engine: Validate stored schema and execute SELECT
+    Engine->>Adapter: Map each result row
+    Adapter-->>Engine: Detached User
+    Engine-->>DB: List<User>
+    DB-->>Shared: List<User>
+    Shared-->>App: List<User>
+```
+
+The parser builds a shared query representation. The executor validates schemas, resolves parameters, and scans or replaces row snapshots in the in-memory catalog. Generated model mapping reads values in the validated schema's column order and calls Kotlin constructors directly, without building per-result column maps or Row objects. Models remain detached; raw queries still return detached Row values.
+
+Generated-code SPI adapters expose `readValues(ModelValues)` for direct mapping. The view is valid only during the mapping call and must not be retained. Existing `read(Row)` adapters use a default bridge that preserves their detached Row behavior; regenerate adapters with the updated processor to use the direct path.
+
+## Supported SQL and limitations
+
+- CREATE TABLE with non-null INT/TEXT columns and optional column-level PRIMARY KEY.
+- Single-row INSERT INTO ... VALUES (...).
+- SELECT with `*` or named columns and an optional single equality condition.
+- UPDATE with one or more SET assignments to literals or named parameters, and optional single equality WHERE.
+- DELETE FROM with optional single equality WHERE. Without WHERE, UPDATE/DELETE affect the entire table.
+- ASCII identifiers (`[A-Za-z_][A-Za-z0-9_]*`), signed 32-bit INT literals, TEXT literals escaped with `''`, and `:name` value parameters.
+- One statement per call, with an optional trailing semicolon. Quoted identifiers and NULL are unsupported. Result order is unspecified.
+- DatabaseException reports execution errors; SqlSyntaxException.position reports a zero-based offset in the SQL string.
+
+Secondary indexes, foreign keys, generated/composite keys, joins, and general-purpose result DTO mapping are not implemented. Repeated primary-key lookups use a bounded cache; other predicates scan. Point value UPDATE copies one immutable row block and the outer block references while preserving the key-position cache. INSERT uniqueness checks, primary-key assignments, tail deletion, WAL diff detection and recovery can still do table-sized work.
+
+The [primary-key validation measurements](baselines/2026-10-08-constraint-validation/README.md) record an allocation reduction from 281.1 to 21.7 KiB per non-key UPDATE at 5,000 rows, with raw observations and interpretation limits.
+
+The [transaction and persistence design](transactions-and-persistence.md) records transaction boundaries, binary snapshots, a row-splice WAL, durable commit ordering, checkpoints, and restart recovery. Memory transactions, file commits, checkpoints, and recovery are implemented. The document records their guarantees and remaining release gates.
+
+Tests cover shared lifetime and reuse, typed SQL mapping and failures, parameter binding, detached results, concurrent facade calls, independent databases, compiler checks, SQL execution, primary-key constraints, generated model mapping, atomic UPDATE/DELETE failures, and randomized CRUD against a reference map. GitHub Actions runs the build for pull requests and pushes to main.
+
+The [development roadmap](roadmap.md) records the current alpha boundary, measured optimization priorities, and release gates.

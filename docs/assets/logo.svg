@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">KoKoDB monogram</title>
+  <desc id="desc">Two separated, folded row bands form the KoKoDB K monogram.</desc>
+<g fill="#7c3aed">
+    <path d="M55 40H88Q96 40 96 48V105H106L161 50Q167 44 176 44H215L138 121Q132 127 124 127H55Q47 127 47 119V48Q47 40 55 40Z"/>
+    <path d="M55 141H125Q133 141 139 147L208 216H166Q158 216 152 210L96 154V208Q96 216 88 216H55Q47 216 47 208V149Q47 141 55 141Z"/>
+  </g>
+</svg>

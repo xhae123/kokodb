@@ -1,0 +1,87 @@
+{
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "architecture": "arm64",
+  "java": "openjdk version \"17.0.20.1\" 2026-08-18\nOpenJDK Runtime Environment Homebrew (build 17.0.20.1+0)\nOpenJDK 64-Bit Server VM Homebrew (build 17.0.20.1+0, mixed mode, sharing)\n",
+  "runtime_commit": "92e62f5a823bee7290e252dce7b459d37f005db5",
+  "runs_per_engine": 20,
+  "input_rows": 1000,
+  "output_rows": 800,
+  "order_seed": 20261024,
+  "commands": {
+    "kokodb": [
+      "$JAVA_HOME/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "$CHECKOUT/examples/catalog/build/install/catalog-example/lib/catalog-example.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/kotlin-stdlib-2.3.20.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/annotations-13.0.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/kokodb-0.1.0-SNAPSHOT.jar",
+      "catalog.MainKt",
+      "kokodb"
+    ],
+    "h2": [
+      "$JAVA_HOME/bin/java",
+      "-Xms64m",
+      "-Xmx256m",
+      "-XX:-UsePerfData",
+      "-cp",
+      "$CHECKOUT/examples/catalog/build/install/catalog-example/lib/catalog-example.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/kotlin-stdlib-2.3.20.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/annotations-13.0.jar:$CHECKOUT/examples/catalog/build/install/catalog-example/lib/h2-2.5.252.jar",
+      "catalog.MainKt",
+      "h2"
+    ]
+  },
+  "input_sha256": "a183a89e2774b916e8cc9726d73014b60c484d3125ec4c404bb085c20a8b75ed",
+  "expected_sha256": "9cb7a0d8689872eb105ee44d67c6904b57e8165ffd4c978265db91ee0fa15697",
+  "sources": {
+    "examples/catalog/measure.py": "9a920fe6afaead60621d46b6617b71b033351760127e4c13e83099f8f7f69b0d",
+    "examples/catalog/build.gradle.kts": "0fcd51c64f200ac24ce77bb16beedfc7a716b2ba353b4c27e6d880b61a702721",
+    "examples/catalog/src/main/kotlin/catalog/JdbcCatalog.kt": "2768a01da1ebb04d517420a25e915168253bb00ca7062f4f02965b36df57789d",
+    "examples/catalog/src/main/kotlin/catalog/KokoCatalog.kt": "8e5553b24283e9cff630375c6ccfceebc3521feec54827a967a4e37b81f3eb0c",
+    "examples/catalog/src/main/kotlin/catalog/Main.kt": "2e0131beeffe2062adeeecc86ae8355f12dd45b6b667df932979a8e4b50528f7"
+  },
+  "jars": {
+    "kokodb": [
+      {
+        "name": "catalog-example.jar",
+        "bytes": 13967,
+        "sha256": "f9d850ebd030a388adb91a3c0452668ec37b9313f0faf5da2b53f082c074858f"
+      },
+      {
+        "name": "kotlin-stdlib-2.3.20.jar",
+        "bytes": 1804720,
+        "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+      },
+      {
+        "name": "annotations-13.0.jar",
+        "bytes": 17536,
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+      },
+      {
+        "name": "kokodb-0.1.0-SNAPSHOT.jar",
+        "bytes": 162685,
+        "sha256": "0a4030e622112e128fc93b223f09e9046e553c5c56a81b96e5293841816f7ee7"
+      }
+    ],
+    "h2": [
+      {
+        "name": "catalog-example.jar",
+        "bytes": 13967,
+        "sha256": "f9d850ebd030a388adb91a3c0452668ec37b9313f0faf5da2b53f082c074858f"
+      },
+      {
+        "name": "kotlin-stdlib-2.3.20.jar",
+        "bytes": 1804720,
+        "sha256": "0ae12504a5040ebaf37703908483420d1a5624dd1d93f357665f8c77c848a01e"
+      },
+      {
+        "name": "annotations-13.0.jar",
+        "bytes": 17536,
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+      },
+      {
+        "name": "h2-2.5.252.jar",
+        "bytes": 2693360,
+        "sha256": "90b11dc413da82070ef15fc943282c1408e6ffd34fa68998335fea8603b5ff20"
+      }
+    ]
+  }
+}

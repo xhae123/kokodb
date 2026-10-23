@@ -1,0 +1,16 @@
+{
+  "host_cpu": "Apple M1",
+  "host_memory_bytes": 8589934592,
+  "runtime_sha256": "0a4030e622112e128fc93b223f09e9046e553c5c56a81b96e5293841816f7ee7",
+  "core_consumer_annotations": {
+    "name": "annotations-13.0.jar",
+    "bytes": 17536,
+    "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+  },
+  "sources": {
+    "comparison/measure.py": "1f58e4e5f51fe1a6e9b9b9f775e1998b81d65287a3c27aa32f50146b1a7b92ec",
+    "comparison/measure_startup.py": "7786a0a1c27c630ca2a5cb4322d5be4662c80ddb3459b22c9c9004ae0f4ee8d2",
+    "comparison/qualify.py": "65d585065f9b304c810279e99a65ad13a6961eef2b74ce91936ebbe719debd60"
+  },
+  "normalization": "Published environment paths use $CHECKOUT and $JAVA_HOME; CSV line endings are LF. Raw local outputs are retained."
+}

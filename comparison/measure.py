@@ -19,7 +19,7 @@ def main():
     parser.add_argument("--java", default=shutil.which("java"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--quick", action="store_true")
-    parser.add_argument("--suite", choices=("models", "points"), default="models")
+    parser.add_argument("--suite", choices=("models", "points", "inserts"), default="models")
     parser.add_argument("--runtime", type=Path)
     parser.add_argument("--engines", choices=("both", "kokodb"), default="both")
     parser.add_argument("--rows", nargs="+", type=int)
@@ -29,13 +29,14 @@ def main():
         jars = [args.runtime.resolve(), *[p for p in jars if not p.name.startswith("kokodb-")]]
     if not jars or not args.java or not all(p.is_file() for p in jars):
         parser.error("Build :comparison:installDist and provide a Java executable")
-    sizes = args.rows or ([1, 100, 1000] if args.suite == "models" else [1000, 10000])
+    sizes = args.rows or {"models": [1, 100, 1000], "points": [1000, 10000], "inserts": [1000, 16000]}[args.suite]
     if any(size < 1 for size in sizes) or len(set(sizes)) != len(sizes):
         parser.error("Row counts must be positive and distinct")
     engines = ["kokodb", "h2"] if args.engines == "both" else ["kokodb"]
-    benchmark = "comparison.ModelQueryBenchmark" if args.suite == "models" else "comparison.PointQueryBenchmark"
-    cases = ["models"] if args.suite == "models" else ["hit", "miss", "updateThenRead"]
-    args.output.mkdir(parents=True, exist_ok=True)
+    benchmark = {"models": "comparison.ModelQueryBenchmark", "points": "comparison.PointQueryBenchmark",
+                 "inserts": "comparison.WriteComparisonBenchmark"}[args.suite]
+    cases = {"models": ["models"], "points": ["hit", "miss", "updateThenRead"], "inserts": ["insert"]}[args.suite]
+    args.output.mkdir(parents=True, exist_ok=False)
     result = args.output.resolve() / "jmh.json"
     command = [args.java, "-cp", os.pathsep.join(str(p) for p in jars), "org.openjdk.jmh.Main",
                benchmark, "-prof", "gc", "-rf", "json", "-rff", str(result), "-foe", "true",
@@ -69,8 +70,8 @@ def main():
         metric = r["primaryMetric"]
         allocation = r["secondaryMetrics"]["gc.alloc.rate.norm"]
         record = {"case": r["benchmark"].split(".")[-1], "engine": r["params"]["engine"], "rows": r["params"]["rows"],
-                  "mean_us_per_query": metric["score"], "error_us": metric["scoreError"],
-                  "allocated_bytes_per_query": allocation["score"]}
+                  "mean_us_per_operation": metric["score"], "error_us": metric["scoreError"],
+                  "allocated_bytes_per_operation": allocation["score"]}
         summary.append(record)
         print(record, flush=True)
     with (args.output / "summary.csv").open("w", newline="") as output:
